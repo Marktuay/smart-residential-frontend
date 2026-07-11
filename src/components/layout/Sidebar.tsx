@@ -13,7 +13,8 @@ import {
   CalendarClock,
   UserCog,
   Settings,
-  LifeBuoy
+  LifeBuoy,
+  LogOut
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -21,6 +22,14 @@ const Sidebar = () => {
 
   const isActive = (path: string) => {
     return pathname === path ? 'active' : '';
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('residencial_id');
+      window.location.href = '/login';
+    }
   };
 
   return (
@@ -54,10 +63,28 @@ const Sidebar = () => {
             Gestion Operativo
           </div>
         </Link>
-        <Link href="/incidencias">
-          <div className={`sidebar-item ${isActive('/incidencias')}`}>
+        <Link href="/incidentes">
+          <div className={`sidebar-item ${isActive('/incidentes')}`}>
             <Siren size={18} color="#FACC15" className="sidebar-item-icon" />
             Gestion de Incidencias
+          </div>
+        </Link>
+        <Link href="/rondas">
+          <div className={`sidebar-item ${isActive('/rondas')}`}>
+            <Map size={18} color="#FACC15" className="sidebar-item-icon" />
+            Control de Rondas
+          </div>
+        </Link>
+        <Link href="/visitas">
+          <div className={`sidebar-item ${isActive('/visitas')}`}>
+            <ClipboardList size={18} color="#FACC15" className="sidebar-item-icon" />
+            Control de Accesos
+          </div>
+        </Link>
+        <Link href="/supervisores">
+          <div className={`sidebar-item ${isActive('/supervisores')}`}>
+            <UserCog size={18} color="#FACC15" className="sidebar-item-icon" />
+            Supervisores
           </div>
         </Link>
         <Link href="/residencial">
@@ -102,6 +129,10 @@ const Sidebar = () => {
             Temas de Ayuda
           </div>
         </Link>
+        <div className="sidebar-item" style={{ cursor: 'pointer', color: '#ef4444', marginTop: '0.5rem' }} onClick={handleLogout}>
+          <LogOut size={18} color="#ef4444" className="sidebar-item-icon" />
+          Cerrar Sesión
+        </div>
       </div>
 
       <div style={{ padding: '1.5rem' }}>

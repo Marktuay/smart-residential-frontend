@@ -3,16 +3,21 @@
 import React, { useEffect, useState } from 'react';
 import { 
   AlertCircle, 
-  CheckCircle, 
-  Clock, 
-  Database,
-  Building,
-  Home,
+  ShieldCheck, 
   Users,
-  ShieldCheck,
-  UserX,
-  MapPin
+  Home,
+  Activity,
+  Bell
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 import api from '@/lib/api';
 
 interface DashboardStats {
@@ -27,6 +32,17 @@ interface DashboardStats {
   residentes: number;
   usuarios_activos: number;
 }
+
+// Datos estáticos para simular la gráfica de actividad semanal
+const chartData = [
+  { name: 'Lun', accesos: 120, rondas: 15 },
+  { name: 'Mar', accesos: 150, rondas: 18 },
+  { name: 'Mié', accesos: 180, rondas: 16 },
+  { name: 'Jue', accesos: 130, rondas: 20 },
+  { name: 'Vie', accesos: 210, rondas: 25 },
+  { name: 'Sáb', accesos: 250, rondas: 22 },
+  { name: 'Dom', accesos: 190, rondas: 18 },
+];
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -50,14 +66,14 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div className="section-title">
         <h1 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Resumen General</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Panel de Control · informatica@newcentury.net</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Panel de Control · Centro de Mando</p>
       </div>
 
       {error && (
-        <div style={{ padding: '1rem', backgroundColor: 'var(--danger)', color: 'white', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--danger)', color: 'white', borderRadius: '0.5rem' }}>
           {error}
         </div>
       )}
@@ -66,110 +82,113 @@ export default function Dashboard() {
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando estadísticas...</div>
       ) : (
         <>
-          <div className="sidebar-section-title" style={{ paddingLeft: 0 }}>INCIDENCIAS</div>
-          <div className="dashboard-grid">
+          {/* Tarjetas Principales (KPIs) */}
+          <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+            {/* Tarjeta 1: Incidentes */}
             <div className="stat-card blue">
               <div className="stat-card-header">
-                <div className="stat-card-title">Activos</div>
-                <div className="stat-card-icon blue"><Clock size={16} /></div>
+                <div className="stat-card-title">Incidentes Activos</div>
+                <div className="stat-card-icon blue"><AlertCircle size={16} /></div>
               </div>
               <div className="stat-card-value">{stats?.activos || 0}</div>
-              <div className="stat-card-desc">Pendientes de resolución</div>
-            </div>
-            
-            <div className="stat-card red">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Críticos</div>
-                <div className="stat-card-icon red"><AlertCircle size={16} /></div>
+              <div className="stat-card-desc" style={stats?.criticos ? { color: 'var(--danger)' } : {}}>
+                {stats?.criticos || 0} de prioridad Crítica
               </div>
-              <div className="stat-card-value" style={{ color: 'var(--danger)' }}>{stats?.criticos || 0}</div>
-              <div className="stat-card-desc" style={{ color: 'var(--danger)' }}>Atención inmediata</div>
             </div>
 
+            {/* Tarjeta 2: Rondas */}
             <div className="stat-card green">
               <div className="stat-card-header">
-                <div className="stat-card-title">Resueltos Hoy</div>
-                <div className="stat-card-icon green"><CheckCircle size={16} /></div>
-              </div>
-              <div className="stat-card-value">{stats?.resueltos_hoy || 0}</div>
-              <div className="stat-card-desc" style={{ color: 'var(--success)' }}>Cerrados hoy</div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Total Histórico</div>
-                <div className="stat-card-icon" style={{ backgroundColor: 'rgba(107, 114, 128, 0.1)' }}><Database size={16} color="var(--text-secondary)" /></div>
-              </div>
-              <div className="stat-card-value">{stats?.total_historico || 0}</div>
-              <div className="stat-card-desc">Registrados</div>
-            </div>
-          </div>
-
-          <div className="sidebar-section-title" style={{ paddingLeft: 0 }}>OPERACIONES</div>
-          <div className="dashboard-grid">
-            <div className="stat-card green">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Rondas Hoy</div>
+                <div className="stat-card-title">Rondas Realizadas</div>
                 <div className="stat-card-icon green"><ShieldCheck size={16} /></div>
               </div>
               <div className="stat-card-value">{stats?.rondas_hoy || 0}</div>
-              <div className="stat-card-desc">Completadas hoy</div>
+              <div className="stat-card-desc">Registradas el día de hoy</div>
             </div>
 
+            {/* Tarjeta 3: Visitas */}
             <div className="stat-card orange">
               <div className="stat-card-header">
-                <div className="stat-card-title">Visitas Hoy</div>
+                <div className="stat-card-title">Visitas Registradas</div>
                 <div className="stat-card-icon orange"><Users size={16} /></div>
               </div>
               <div className="stat-card-value">{stats?.visitas_hoy || 0}</div>
-              <div className="stat-card-desc">Ingresos registrados</div>
+              <div className="stat-card-desc">Ingresos validados hoy</div>
             </div>
 
-            <div className="stat-card blue">
+            {/* Tarjeta 4: Residentes */}
+            <div className="stat-card purple">
               <div className="stat-card-header">
-                <div className="stat-card-title">Puntos QR</div>
-                <div className="stat-card-icon blue"><MapPin size={16} /></div>
+                <div className="stat-card-title">Total Residentes</div>
+                <div className="stat-card-icon purple"><Home size={16} /></div>
               </div>
-              <div className="stat-card-value">{stats?.casas_qr || 0}</div>
-              <div className="stat-card-desc">Registrados</div>
+              <div className="stat-card-value">{stats?.residentes || 0}</div>
+              <div className="stat-card-desc">{stats?.casas_qr || 0} Puntos QR habitacionales</div>
             </div>
           </div>
 
-          <div className="sidebar-section-title" style={{ paddingLeft: 0 }}>RESIDENCIAL & PERSONAL</div>
-          <div className="dashboard-grid">
-            <div className="stat-card purple">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Complejos</div>
-                <div className="stat-card-icon purple"><Building size={16} /></div>
+          {/* Sección de Gráficos y Actividad Reciente */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+            
+            {/* Gráfico */}
+            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                <Activity size={20} color="var(--primary)" />
+                <h2 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Actividad Semanal</h2>
               </div>
-              <div className="stat-card-value">{stats?.complejos || 1}</div>
+              <div style={{ height: '300px', width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorAccesos" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorRondas" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--success)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--success)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)' }} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem' }}
+                      itemStyle={{ color: 'var(--text-primary)' }}
+                    />
+                    <Area type="monotone" dataKey="accesos" stroke="var(--primary)" fillOpacity={1} fill="url(#colorAccesos)" name="Accesos" />
+                    <Area type="monotone" dataKey="rondas" stroke="var(--success)" fillOpacity={1} fill="url(#colorRondas)" name="Rondas" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            <div className="stat-card green">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Residentes</div>
-                <div className="stat-card-icon blue"><Home size={16} /></div>
+            {/* Últimas Novedades */}
+            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--border-color)', height: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                <Bell size={20} color="var(--warning)" />
+                <h2 style={{ fontSize: '1.125rem', fontWeight: '600' }}>Últimas Novedades</h2>
               </div>
-              <div className="stat-card-value">{stats?.residentes || 0}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {[
+                  { id: 1, title: 'Nueva Visita', desc: 'Ingreso peatonal - Proveedor', time: 'Hace 5 min' },
+                  { id: 2, title: 'Ronda Completada', desc: 'Sector Norte - Sin novedades', time: 'Hace 12 min' },
+                  { id: 3, title: 'Alerta Abierta', desc: 'Vehículo mal estacionado - Zona B', time: 'Hace 45 min' },
+                  { id: 4, title: 'Alerta Abierta', desc: 'Ruido excesivo - Casa 42', time: 'Hace 2 horas' },
+                ].map((item) => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--border-color)' }}>
+                    <div>
+                      <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>{item.title}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{item.desc}</div>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                      {item.time}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="stat-card green">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Usuarios Activos</div>
-                <div className="stat-card-icon green"><ShieldCheck size={16} /></div>
-              </div>
-              <div className="stat-card-value" style={{ color: 'var(--success)' }}>{stats?.usuarios_activos || 0}</div>
-              <div className="stat-card-desc" style={{ color: 'var(--success)' }}>En servicio</div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <div className="stat-card-title">Usuarios Inactivos</div>
-                <div className="stat-card-icon" style={{ backgroundColor: 'rgba(107, 114, 128, 0.1)' }}><UserX size={16} color="var(--text-secondary)" /></div>
-              </div>
-              <div className="stat-card-value">0</div>
-              <div className="stat-card-desc">Dados de baja</div>
-            </div>
           </div>
         </>
       )}
