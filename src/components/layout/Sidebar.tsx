@@ -16,7 +16,9 @@ import {
   LifeBuoy,
   LogOut,
   FileText,
-  QrCode
+  QrCode,
+  Bell,
+  Navigation
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -114,6 +116,22 @@ const Sidebar = () => {
             Gestion de Cobros
           </div>
         </Link>
+        {userRole === 'GUARDIA' && (
+          <Link href="/patrullaje">
+            <div className={`sidebar-item ${isActive('/patrullaje')}`}>
+              <Navigation size={18} color="#FACC15" className="sidebar-item-icon" />
+              Patrullaje Móvil
+            </div>
+          </Link>
+        )}
+        {(userRole === 'ADMIN' || userRole === 'SISADMIN') && (
+          <Link href="/notificar">
+            <div className={`sidebar-item ${isActive('/notificar')}`}>
+              <Bell size={18} color="#FACC15" className="sidebar-item-icon" />
+              Despachar Alertas
+            </div>
+          </Link>
+        )}
 
         <div className="sidebar-section-title">Gestión de Turnos</div>
         <Link href="/programacion">

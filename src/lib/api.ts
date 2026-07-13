@@ -309,6 +309,9 @@ export const trackingApi = {
   getHistorial: async (usuarioId: number, fechaInicio: string, fechaFin: string): Promise<HistorialUbicacion[]> => {
     const response = await api.get(`/tracking/historial?usuario_id=${usuarioId}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
     return response.data;
+  },
+  updateLocation: async (data: { usuario_id: number; latitud: number; longitud: number }): Promise<void> => {
+    await api.post('/tracking/location', data);
   }
 };
 
@@ -342,5 +345,27 @@ export const turnosApi = {
   },
   deleteTurno: async (id: number): Promise<void> => {
     await api.delete(`/turnos/${id}`);
+  }
+};
+
+// --- Módulo de Notificaciones Push ---
+
+export interface SuscripcionPush {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+export const pushApi = {
+  getVAPIDPublicKey: async (): Promise<string> => {
+    const response = await api.get('/push/vapid-public-key');
+    return response.data.public_key;
+  },
+  subscribe: async (data: SuscripcionPush): Promise<void> => {
+    await api.post('/push/subscribe', data);
+  },
+  sendNotification: async (data: { guardia_id?: number; titulo: string; cuerpo: string }): Promise<any> => {
+    const response = await api.post('/push/send', data);
+    return response.data;
   }
 };
