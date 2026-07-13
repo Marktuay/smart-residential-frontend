@@ -260,3 +260,20 @@ export const finanzasApi = {
     return response.data.data; // NestJS usually wraps in "data"
   }
 };
+
+// --- Módulo de Tracking (Geolocalización) ---
+
+export interface Ubicacion {
+  usuario_id: number;
+  latitud: number;
+  longitud: number;
+  ultima_actualizacion?: string;
+  nombre?: string; // Podríamos cruzarlo en el componente o pedirlo al backend
+}
+
+export const trackingApi = {
+  getUbicaciones: async (): Promise<Ubicacion[]> => {
+    const response = await api.get('/tracking/live');
+    return response.data;
+  }
+};
