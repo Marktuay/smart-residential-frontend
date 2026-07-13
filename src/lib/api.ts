@@ -156,6 +156,10 @@ export interface ResidencialInfo {
 	latitud_centro: number;
 	longitud_centro: number;
 	zoom_defecto: number;
+	tolerancia_ronda_mins?: number;
+	frecuencia_gps_seg?: number;
+	email_alerta_incidentes?: string;
+	telefono_emergencia?: string;
 	created_at: string;
 }
 
@@ -171,6 +175,9 @@ export const residencialApi = {
 	getInfo: async (): Promise<ResidencialInfo> => {
 		const response = await api.get('/residencial/info');
 		return response.data;
+	},
+	updateConfig: async (data: Partial<ResidencialInfo>): Promise<void> => {
+		await api.put('/residencial/config', data);
 	},
 	getCasas: async (): Promise<Casa[]> => {
 		const response = await api.get('/casas');
