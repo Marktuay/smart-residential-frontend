@@ -47,6 +47,15 @@ export default function VisitasPage() {
     }
   };
 
+  const handleActualizarEstado = async (id: number, nuevoEstado: string) => {
+    try {
+      await visitasApi.actualizarEstado(id, nuevoEstado);
+      fetchVisitas();
+    } catch (error) {
+      console.error("Error al actualizar estado de la visita:", error);
+    }
+  };
+
   const formatCedula = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
     let formatted = '';
@@ -233,11 +242,17 @@ export default function VisitasPage() {
             {(visita.estado === 'PENDIENTE' || visita.estado === 'EN_CURSO') && (
               <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                 {visita.estado === 'PENDIENTE' ? (
-                  <button style={{ flex: 1, backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' }}>
+                  <button 
+                    onClick={() => handleActualizarEstado(visita.id, 'EN_CURSO')}
+                    style={{ flex: 1, backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' }}
+                  >
                     Marcar Ingreso
                   </button>
                 ) : (
-                  <button style={{ flex: 1, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' }}>
+                  <button 
+                    onClick={() => handleActualizarEstado(visita.id, 'FINALIZADA')}
+                    style={{ flex: 1, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '500', cursor: 'pointer' }}
+                  >
                     Marcar Salida
                   </button>
                 )}

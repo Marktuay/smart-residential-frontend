@@ -122,7 +122,10 @@ export const visitasApi = {
 	registrarVisita: async (data: Visita): Promise<Visita> => {
 		const response = await api.post('/visitas', data);
 		return response.data;
-	}
+	},
+  actualizarEstado: async (id: number, estado: string): Promise<void> => {
+    await api.put(`/visitas/${id}/estado`, { estado });
+  }
 };
 
 // --- Módulo de Gestión Residencial ---
