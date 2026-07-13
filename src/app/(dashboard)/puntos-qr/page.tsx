@@ -6,12 +6,17 @@ import {
   MapPin, 
   QrCode,
   X,
-  Download
+  Download,
+  ShieldCheck,
+  ShieldAlert,
+  Home,
+  User
 } from 'lucide-react';
-import { puntosQrApi, PuntoQR } from '@/lib/api';
+import { puntosQrApi, residencialApi, PuntoQR, Casa } from '@/lib/api';
 
 export default function PuntosQRPage() {
   const [puntos, setPuntos] = useState<PuntoQR[]>([]);
+  const [casas, setCasas] = useState<Casa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -22,7 +27,8 @@ export default function PuntosQRPage() {
   const [formData, setFormData] = useState({
     nombre: '',
     latitud: '',
-    longitud: ''
+    longitud: '',
+    casa_id: ''
   });
 
   useEffect(() => {
@@ -32,11 +38,15 @@ export default function PuntosQRPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await puntosQrApi.getPuntos();
-      setPuntos(data);
+      const [dataPuntos, dataCasas] = await Promise.all([
+        puntosQrApi.getPuntos(),
+        residencialApi.getCasas()
+      ]);
+      setPuntos(dataPuntos || []);
+      setCasas(dataCasas || []);
     } catch (err) {
       console.error(err);
-      setError('No se pudo cargar la información de los puntos QR.');
+      setError('No se pudo cargar la información de los puntos QR o de las casas.');
     } finally {
       setLoading(false);
     }
@@ -50,13 +60,15 @@ export default function PuntosQRPage() {
       await puntosQrApi.createPunto({
         nombre: formData.nombre,
         latitud: formData.latitud ? parseFloat(formData.latitud) : undefined,
-        longitud: formData.longitud ? parseFloat(formData.longitud) : undefined
+        longitud: formData.longitud ? parseFloat(formData.longitud) : undefined,
+        casa_id: formData.casa_id ? parseInt(formData.casa_id, 10) : null
       });
       setIsModalOpen(false);
       setFormData({
         nombre: '',
         latitud: '',
-        longitud: ''
+        longitud: '',
+        casa_id: ''
       });
       fetchData(); // Refresh data
     } catch (err) {
@@ -115,7 +127,7 @@ export default function PuntosQRPage() {
           <p>No hay puntos QR registrados. Agrega uno para empezar a diseñar rondas.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
           {puntos.map((punto) => (
             <div key={punto.id} style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -128,10 +140,52 @@ export default function PuntosQRPage() {
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID: #{punto.id}</span>
                   </div>
                 </div>
+                {punto.casa_id && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '0.5rem',
+                    backgroundColor: punto.tiene_contrato_seguridad ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: `1px solid ${punto.tiene_contrato_seguridad ? '#22c55e' : '#ef4444'}`,
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: punto.tiene_contrato_seguridad ? '#22c55e' : '#ef4444',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    {punto.tiene_contrato_seguridad ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
+                    <span>{punto.tiene_contrato_seguridad ? 'Contrato Activo' : 'Sin Contrato'}</span>
+                  </div>
+                )}
               </div>
+
+              {/* Detalles de Casa y Residente (si está vinculado) */}
+              {punto.casa_id && (
+                <div style={{ 
+                  padding: '0.75rem', 
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)', 
+                  borderRadius: '0.5rem', 
+                  border: '1px solid var(--border-color)',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                    <Home size={14} style={{ color: '#FACC15' }} />
+                    <span>Casa Vinculada: <strong>{punto.numero_casa}</strong></span>
+                  </div>
+                  {punto.residente_nombre && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                      <User size={14} />
+                      <span>Propietario: {punto.residente_nombre}</span>
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div style={{ padding: '1rem', backgroundColor: 'var(--bg-body)', borderRadius: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                {/* Generador de QR visual basado en URL dummy de Google Chart API para prototipo rápido */}
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${punto.codigo_qr}`}
                   alt="QR Code"
@@ -188,6 +242,23 @@ export default function PuntosQRPage() {
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
                   placeholder="Ej. Puerta Principal, Bodega B, Parque"
                 />
+              </div>
+
+              {/* Vincular a Casa (Dropdown) */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Vincular a Casa (Opcional)</label>
+                <select
+                  value={formData.casa_id}
+                  onChange={(e) => setFormData({...formData, casa_id: e.target.value})}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                >
+                  <option value="">-- No vincular a una casa --</option>
+                  {casas.map(c => (
+                    <option key={c.id} value={c.id || ''}>
+                      Casa {c.numero_casa} - {c.bloque} {c.tiene_contrato_seguridad ? '🛡️ (Con Contrato)' : '❌ (Sin Contrato)'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -14,11 +14,20 @@ import {
   UserCog,
   Settings,
   LifeBuoy,
-  LogOut
+  LogOut,
+  FileText,
+  QrCode
 } from 'lucide-react';
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserRole(localStorage.getItem('user_role'));
+    }
+  }, []);
 
   const isActive = (path: string) => {
     return pathname === path ? 'active' : '';
@@ -75,6 +84,12 @@ const Sidebar = () => {
             Control de Rondas
           </div>
         </Link>
+        <Link href="/puntos-qr">
+          <div className={`sidebar-item ${isActive('/puntos-qr')}`}>
+            <QrCode size={18} color="#FACC15" className="sidebar-item-icon" />
+            Puntos de Control QR
+          </div>
+        </Link>
         <Link href="/visitas">
           <div className={`sidebar-item ${isActive('/visitas')}`}>
             <ClipboardList size={18} color="#FACC15" className="sidebar-item-icon" />
@@ -121,6 +136,14 @@ const Sidebar = () => {
             Configuración
           </div>
         </Link>
+        {userRole === 'SISADMIN' && (
+          <Link href="/auditoria">
+            <div className={`sidebar-item ${isActive('/auditoria')}`}>
+              <FileText size={18} color="#FACC15" className="sidebar-item-icon" />
+              Auditoría
+            </div>
+          </Link>
+        )}
 
         <div className="sidebar-section-title" style={{ marginTop: 'auto' }}>Soporte</div>
         <Link href="/ayuda">

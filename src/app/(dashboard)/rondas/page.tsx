@@ -181,8 +181,23 @@ export default function RondasPage() {
                           {punto.nombre}
                         </span>
                         {isHousePoint && (
-                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            Casa {punto.numero_casa} | {punto.residente_nombre || 'Sin residente'}
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.125rem' }}>
+                            <span>Casa {punto.numero_casa} | {punto.residente_nombre || 'Sin residente'}</span>
+                            <span style={{ 
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.125rem',
+                              padding: '1px 4px',
+                              borderRadius: '4px',
+                              backgroundColor: punto.tiene_contrato_seguridad ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              border: `1px solid ${punto.tiene_contrato_seguridad ? '#22c55e' : '#ef4444'}`,
+                              color: punto.tiene_contrato_seguridad ? '#22c55e' : '#ef4444',
+                              fontSize: '0.65rem',
+                              fontWeight: 'bold'
+                            }}>
+                              <Shield size={10} />
+                              {punto.tiene_contrato_seguridad ? 'Activo' : 'Inactivo'}
+                            </span>
                           </span>
                         )}
                       </div>

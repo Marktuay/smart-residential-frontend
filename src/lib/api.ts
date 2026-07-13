@@ -133,6 +133,7 @@ export interface Casa {
 	numero_casa: string;
 	bloque: string;
 	estado: string;
+	tiene_contrato_seguridad?: boolean;
 	created_at?: string;
 }
 
@@ -223,6 +224,7 @@ export interface PuntoQR {
   longitud?: number;
   numero_casa?: string;
   residente_nombre?: string;
+  tiene_contrato_seguridad?: boolean;
 }
 
 export const puntosQrApi = {
@@ -307,5 +309,38 @@ export const trackingApi = {
   getHistorial: async (usuarioId: number, fechaInicio: string, fechaFin: string): Promise<HistorialUbicacion[]> => {
     const response = await api.get(`/tracking/historial?usuario_id=${usuarioId}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
     return response.data;
+  }
+};
+
+// --- Módulo de Turnos ---
+
+export interface Turno {
+  id?: number;
+  residencial_id?: string;
+  guardia_id: number;
+  guardia_email?: string;
+  fecha: string; // YYYY-MM-DD
+  hora_inicio: string; // HH:MM
+  hora_fin: string; // HH:MM
+  descripcion: string;
+  ubicacion: string;
+  estado: string; // PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO
+}
+
+export const turnosApi = {
+  getTurnos: async (): Promise<Turno[]> => {
+    const response = await api.get('/turnos');
+    return response.data;
+  },
+  createTurno: async (data: Turno): Promise<Turno> => {
+    const response = await api.post('/turnos', data);
+    return response.data;
+  },
+  updateTurno: async (id: number, data: Turno): Promise<Turno> => {
+    const response = await api.put(`/turnos/${id}`, data);
+    return response.data;
+  },
+  deleteTurno: async (id: number): Promise<void> => {
+    await api.delete(`/turnos/${id}`);
   }
 };
