@@ -10,15 +10,21 @@ import {
   ShieldCheck,
   ShieldAlert,
   Home,
-  User
+  User,
+  Building
 } from 'lucide-react';
-import { puntosQrApi, residencialApi, PuntoQR, Casa } from '@/lib/api';
+import { puntosQrApi, residencialApi, PuntoQR, Casa, ResidencialInfo } from '@/lib/api';
 
 export default function PuntosQRPage() {
   const [puntos, setPuntos] = useState<PuntoQR[]>([]);
   const [casas, setCasas] = useState<Casa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Estados para multi-tenant selector (SISADMIN)
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [residenciales, setResidenciales] = useState<ResidencialInfo[]>([]);
+  const [selectedResidencialId, setSelectedResidencialId] = useState<string>('');
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,11 +38,38 @@ export default function PuntosQRPage() {
   });
 
   useEffect(() => {
-    fetchData();
+    const role = localStorage.getItem('user_role');
+    const resId = localStorage.getItem('residencial_id') || '';
+    setUserRole(role);
+    setSelectedResidencialId(resId);
+
+    const init = async () => {
+      if (role === 'SISADMIN') {
+        try {
+          const list = await residencialApi.getResidenciales();
+          setResidenciales(list || []);
+        } catch (err) {
+          console.error('Error al cargar residenciales:', err);
+        }
+      }
+      fetchData(resId);
+    };
+
+    init();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (resId?: string) => {
+    const activeResId = resId !== undefined ? resId : (localStorage.getItem('residencial_id') || '');
+    
+    if (!activeResId) {
+      setPuntos([]);
+      setCasas([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setError('');
     try {
       const [dataPuntos, dataCasas] = await Promise.all([
         puntosQrApi.getPuntos(),
@@ -50,6 +83,12 @@ export default function PuntosQRPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResidencialChange = (resId: string) => {
+    setSelectedResidencialId(resId);
+    localStorage.setItem('residencial_id', resId);
+    fetchData(resId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,19 +138,49 @@ export default function PuntosQRPage() {
             Gestiona los puntos físicos que los guardias deben escanear durante sus rondas.
           </p>
         </div>
-        
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: '0.5rem', 
-            padding: '0.75rem 1.25rem', backgroundColor: 'var(--primary)', 
-            color: 'white', border: 'none', borderRadius: '0.5rem', 
-            fontWeight: '500', cursor: 'pointer', transition: 'opacity 0.2s' 
-          }}
-        >
-          <Plus size={18} />
-          <span>Nuevo Punto QR</span>
-        </button>
+
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          {/* Selector de Residencial para SISADMIN */}
+          {userRole === 'SISADMIN' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Residencial:</span>
+              <select
+                value={selectedResidencialId}
+                onChange={(e) => handleResidencialChange(e.target.value)}
+                style={{
+                  padding: '0.5rem 2rem 0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  fontWeight: '600',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">-- Seleccionar --</option>
+                {residenciales.map(r => (
+                  <option key={r.id} value={r.id}>{r.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            disabled={!selectedResidencialId}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '0.5rem', 
+              padding: '0.75rem 1.25rem', backgroundColor: 'var(--primary)', 
+              color: 'white', border: 'none', borderRadius: '0.5rem', 
+              fontWeight: '500', cursor: !selectedResidencialId ? 'not-allowed' : 'pointer',
+              opacity: !selectedResidencialId ? 0.5 : 1, transition: 'opacity 0.2s' 
+            }}
+          >
+            <Plus size={18} />
+            <span>Nuevo Punto QR</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -121,10 +190,15 @@ export default function PuntosQRPage() {
       )}
 
       {/* Grid de Puntos QR */}
-      {puntos.length === 0 ? (
+      {!selectedResidencialId ? (
+        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <Building size={48} style={{ margin: '0 auto 1rem', opacity: 0.2, color: '#FACC15' }} />
+          <p>Por favor seleccione un residencial activo en la parte superior para visualizar y gestionar sus puntos de control.</p>
+        </div>
+      ) : puntos.length === 0 ? (
         <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <QrCode size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
-          <p>No hay puntos QR registrados. Agrega uno para empezar a diseñar rondas.</p>
+          <p>No hay puntos QR registrados en este residencial. Agrega uno para empezar a diseñar rondas.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
