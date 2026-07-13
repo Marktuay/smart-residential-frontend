@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Home, Users, Plus, Edit, Trash2, X } from 'lucide-react';
-import { residencialApi, Casa, Residente } from '@/lib/api';
+import { Home, Users, Plus, Edit, Trash2, X, Building } from 'lucide-react';
+import { residencialApi, Casa, Residente, ResidencialInfo } from '@/lib/api';
 
 export default function ResidencialPage() {
-  const [activeTab, setActiveTab] = useState<'casas' | 'residentes'>('casas');
+  const [activeTab, setActiveTab] = useState<'instalaciones' | 'casas' | 'residentes'>('casas');
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // States para Instalaciones (Residenciales)
+  const [instalaciones, setInstalaciones] = useState<ResidencialInfo[]>([]);
+  const [loadingInstalaciones, setLoadingInstalaciones] = useState(true);
+  const [showInstalacionForm, setShowInstalacionForm] = useState(false);
+  const [nuevaInstalacion, setNuevaInstalacion] = useState<Partial<ResidencialInfo>>({
+    id: '', nombre: '', direccion: '', latitud_centro: 12.1364, longitud_centro: -86.2514, zoom_defecto: 13
+  });
   
   // States para Casas
   const [casas, setCasas] = useState<Casa[]>([]);
@@ -53,7 +62,48 @@ export default function ResidencialPage() {
     }
   };
 
+  const fetchInstalaciones = async () => {
+    setLoadingInstalaciones(true);
+    try {
+      const data = await residencialApi.getResidenciales();
+      setInstalaciones(data || []);
+    } catch (error) {
+      console.error('Error al obtener instalaciones:', error);
+    } finally {
+      setLoadingInstalaciones(false);
+    }
+  };
+
   useEffect(() => {
+    let role = localStorage.getItem('user_role');
+    
+    // Fallback: Si no está en localStorage (ej. sesión antigua), intentar extraerlo del JWT
+    if (!role) {
+      const token = localStorage.getItem('jwt_token');
+      if (token) {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          // Add padding if necessary
+          const pad = base64.length % 4;
+          const paddedBase64 = pad ? base64 + '='.repeat(4 - pad) : base64;
+          const payload = JSON.parse(atob(paddedBase64));
+          if (payload && payload.rol) {
+            role = payload.rol as string;
+            localStorage.setItem('user_role', role);
+          }
+        } catch (e) {
+          console.error('Error al decodificar JWT en cliente:', e);
+        }
+      }
+    }
+
+    setUserRole(role);
+    if (role === 'SISADMIN') {
+      setActiveTab('instalaciones');
+      fetchInstalaciones();
+    }
+
     fetchCasas();
     fetchResidentes();
   }, []);
@@ -85,6 +135,19 @@ export default function ResidencialPage() {
     }
   };
 
+  const handleCrearInstalacion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await residencialApi.createResidencial(nuevaInstalacion as ResidencialInfo);
+      setShowInstalacionForm(false);
+      setNuevaInstalacion({ id: '', nombre: '', direccion: '', latitud_centro: 12.1364, longitud_centro: -86.2514, zoom_defecto: 13 });
+      fetchInstalaciones();
+    } catch (error) {
+      console.error('Error creando instalación:', error);
+      alert('Hubo un error al registrar la instalación.');
+    }
+  };
+
   return (
     <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
       {/* Header */}
@@ -101,6 +164,22 @@ export default function ResidencialPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-body)', padding: '0.5rem', borderRadius: '0.75rem', width: 'fit-content', marginBottom: '1.5rem' }}>
+        {userRole === 'SISADMIN' && (
+          <button
+            onClick={() => setActiveTab('instalaciones')}
+            style={{
+              padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+              backgroundColor: activeTab === 'instalaciones' ? 'var(--bg-card)' : 'transparent',
+              color: activeTab === 'instalaciones' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              border: activeTab === 'instalaciones' ? '1px solid var(--border-color)' : 'none',
+              borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
+              boxShadow: activeTab === 'instalaciones' ? 'var(--shadow-sm)' : 'none'
+            }}
+          >
+            <Building size={16} />
+            Instalaciones
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('casas')}
           style={{
@@ -130,6 +209,52 @@ export default function ResidencialPage() {
           Residentes
         </button>
       </div>
+
+      {/* Contenido Instalaciones (Solo SISADMIN) */}
+      {activeTab === 'instalaciones' && userRole === 'SISADMIN' && (
+        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Directorio de Instalaciones</h2>
+            <button 
+              onClick={() => setShowInstalacionForm(true)}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '0.5rem', 
+                padding: '0.5rem 1rem', backgroundColor: '#1e293b', 
+                color: 'white', border: 'none', borderRadius: '0.5rem', 
+                fontWeight: '500', cursor: 'pointer'
+              }}
+            >
+              <Plus size={16} style={{ color: '#FACC15' }} />
+              <span>Registrar Instalación</span>
+            </button>
+          </div>
+          
+          {loadingInstalaciones ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando instalaciones...</div>
+          ) : instalaciones.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No hay instalaciones registradas aún.</div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border-color)' }}>
+                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Identificador</th>
+                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Nombre</th>
+                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Dirección</th>
+                </tr>
+              </thead>
+              <tbody>
+                {instalaciones.map((inst) => (
+                  <tr key={inst.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontWeight: '500', color: 'var(--text-primary)' }}>{inst.id}</td>
+                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>{inst.nombre}</td>
+                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>{inst.direccion || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Contenido Casas */}
       {activeTab === 'casas' && (
@@ -389,6 +514,96 @@ export default function ResidencialPage() {
               </div>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setShowResidenteForm(false)} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button type="submit" style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#1e293b', color: 'white', fontWeight: '500', cursor: 'pointer' }}>
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Instalación */}
+      {showInstalacionForm && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)', borderRadius: '1rem', width: '100%', maxWidth: '500px',
+            boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)'
+          }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Registrar Instalación</h2>
+              <button onClick={() => setShowInstalacionForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCrearInstalacion} style={{ padding: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Identificador (ID Único)</label>
+                <input
+                  type="text" required
+                  value={nuevaInstalacion.id}
+                  onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, id: e.target.value})}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  placeholder="Ej. los-robles"
+                />
+              </div>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre Comercial</label>
+                <input
+                  type="text" required
+                  value={nuevaInstalacion.nombre}
+                  onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, nombre: e.target.value})}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  placeholder="Ej. Residencial Los Robles"
+                />
+              </div>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Dirección Física</label>
+                <input
+                  type="text"
+                  value={nuevaInstalacion.direccion}
+                  onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, direccion: e.target.value})}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Latitud Centro</label>
+                  <input
+                    type="number" step="any"
+                    value={nuevaInstalacion.latitud_centro}
+                    onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, latitud_centro: parseFloat(e.target.value)})}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Longitud Centro</label>
+                  <input
+                    type="number" step="any"
+                    value={nuevaInstalacion.longitud_centro}
+                    onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, longitud_centro: parseFloat(e.target.value)})}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Zoom</label>
+                  <input
+                    type="number"
+                    value={nuevaInstalacion.zoom_defecto}
+                    onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, zoom_defecto: parseInt(e.target.value)})}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" onClick={() => setShowInstalacionForm(false)} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}>
                   Cancelar
                 </button>
                 <button type="submit" style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#1e293b', color: 'white', fontWeight: '500', cursor: 'pointer' }}>

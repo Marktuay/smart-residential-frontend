@@ -148,7 +148,29 @@ export interface Residente {
 	created_at?: string;
 }
 
+export interface ResidencialInfo {
+	id: string;
+	nombre: string;
+	direccion: string;
+	latitud_centro: number;
+	longitud_centro: number;
+	zoom_defecto: number;
+	created_at: string;
+}
+
 export const residencialApi = {
+	getResidenciales: async (): Promise<ResidencialInfo[]> => {
+		const response = await api.get('/residenciales');
+		return response.data;
+	},
+	createResidencial: async (data: ResidencialInfo): Promise<ResidencialInfo> => {
+		const response = await api.post('/residenciales', data);
+		return response.data;
+	},
+	getInfo: async (): Promise<ResidencialInfo> => {
+		const response = await api.get('/residencial/info');
+		return response.data;
+	},
 	getCasas: async (): Promise<Casa[]> => {
 		const response = await api.get('/casas');
 		return response.data;
@@ -271,9 +293,19 @@ export interface Ubicacion {
   nombre?: string; // Podríamos cruzarlo en el componente o pedirlo al backend
 }
 
+export interface HistorialUbicacion {
+  latitud: number;
+  longitud: number;
+  registrado_en: string;
+}
+
 export const trackingApi = {
   getUbicaciones: async (): Promise<Ubicacion[]> => {
     const response = await api.get('/tracking/live');
+    return response.data;
+  },
+  getHistorial: async (usuarioId: number, fechaInicio: string, fechaFin: string): Promise<HistorialUbicacion[]> => {
+    const response = await api.get(`/tracking/historial?usuario_id=${usuarioId}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
     return response.data;
   }
 };

@@ -23,11 +23,12 @@ export default function Login() {
         password,
       });
 
-      const { token, residencial_id } = response.data;
+      const { token, residencial_id, rol } = response.data;
 
       // Guardar en localStorage
       localStorage.setItem('jwt_token', token);
       localStorage.setItem('residencial_id', residencial_id);
+      localStorage.setItem('user_role', rol);
 
       // Redirigir al dashboard
       router.push('/');
