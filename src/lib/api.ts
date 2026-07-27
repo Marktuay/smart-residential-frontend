@@ -1,8 +1,12 @@
 import axios from 'axios';
 
+const baseURL = process.env.NEXT_PUBLIC_API_URL 
+  ? (process.env.NEXT_PUBLIC_API_URL.endsWith('/api/v1') ? process.env.NEXT_PUBLIC_API_URL : `${process.env.NEXT_PUBLIC_API_URL}/api/v1`)
+  : 'https://api.ncsecurity.net/api/v1';
+
 // Creamos una instancia de axios con la URL base del backend
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api/v1',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
