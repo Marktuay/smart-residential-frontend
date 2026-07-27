@@ -52,11 +52,26 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null;
+        if (!token) {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          return;
+        }
+
         const response = await api.get('/dashboard/stats');
         setStats(response.data);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching stats:', err);
-        setError('Error al cargar los datos del dashboard. Verifique su conexión al backend.');
+        if (err.response?.status === 401) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login';
+          }
+        } else {
+          setError('Error al cargar los datos del dashboard. Verifique su conexión al backend.');
+        }
       } finally {
         setLoading(false);
       }
