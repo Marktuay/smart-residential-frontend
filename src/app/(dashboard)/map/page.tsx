@@ -62,8 +62,8 @@ export default function OperativeMapPage() {
     const fetchGuardias = async () => {
       try {
         const users = await usuariosApi.getUsuarios();
-        // Filtrar solo guardias
-        setGuardiasDisponibles(users.filter(u => u.rol === 'GUARDIA'));
+        const rolesGuardias = ['GUARDIA', 'GUARDIA_PATRULLERO', 'GUARDIA_MOTORIZADO', 'OPERADOR_C2', 'SUPERVISOR'];
+        setGuardiasDisponibles(users.filter(u => rolesGuardias.includes(u.rol)));
       } catch (err) {
         console.error('Error fetching usuarios:', err);
       }
@@ -72,8 +72,8 @@ export default function OperativeMapPage() {
   }, []);
 
   const buscarHistorial = async () => {
-    if (!guardiaSeleccionado || !fechaInicio || !fechaFin) {
-      alert("Por favor selecciona un guardia y un rango de fechas.");
+    if (guardiaSeleccionado === '' || !fechaInicio || !fechaFin) {
+      alert("Por favor selecciona un guardia (o 'Todos') y un rango de fechas.");
       return;
     }
     setCargandoHistorial(true);
@@ -196,11 +196,15 @@ export default function OperativeMapPage() {
                   onChange={(e) => setGuardiaSeleccionado(e.target.value)}
                 >
                   <option value="">-- Seleccione un guardia --</option>
-                  {guardiasDisponibles.map(g => (
-                    <option key={g.id} value={g.id}>
-                      {g.email} (ID: {g.id})
-                    </option>
-                  ))}
+                  <option value="0">🌐 -- Todos los Guardias / Personal --</option>
+                  {guardiasDisponibles.map(g => {
+                    const nombre = g.email ? g.email.split('@')[0].replace(/[\._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : `Guardia #${g.id}`;
+                    return (
+                      <option key={g.id} value={g.id}>
+                        👮‍♂️ {nombre} ({g.rol} - {g.email})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
