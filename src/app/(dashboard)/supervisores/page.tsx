@@ -19,7 +19,10 @@ import {
   Download,
   Printer,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Edit,
+  Save,
+  ShieldAlert
 } from 'lucide-react';
 import { usuariosApi, Usuario } from '@/lib/api';
 
@@ -30,28 +33,61 @@ const getNombreFromEmail = (email: string) => {
     .replace(/\b\w/g, c => c.toUpperCase());
 };
 
-const getTelefonoById = (id?: number) => {
-  if (!id) return '+505 8888-0000';
-  return `+505 8${(id * 13) % 10}${(id * 7) % 10}${(id * 3) % 10}-${String(id * 1234).padStart(4, '0').slice(-4)}`;
-};
+interface Amonestacion {
+  id: number;
+  gravedad: 'LEVE' | 'MEDIA' | 'GRAVE' | 'MUY_GRAVE';
+  puntos: number;
+  motivo: string;
+  fecha: string;
+}
 
 export default function SupervisoresPage() {
   const [supervisores, setSupervisores] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filtroTexto, setFiltroTexto] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('todos');
 
   // Modales
   const [showModal, setShowModal] = useState(false);
   const [showFichaModal, setShowFichaModal] = useState(false);
   const [showCarnetModal, setShowCarnetModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'vacaciones' | 'amonestaciones'>('info');
 
-  // Formulario Nuevo Supervisor
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Estado extendido editable del perfil
+  const [userProfileData, setUserProfileData] = useState({
+    dni: '201-200571-0003P',
+    puesto: 'Ciudad Campuzano / Garita Principal',
+    salario: '$9,500.00 / mes',
+    contactoEmergencia: 'Carlos Soto (+505 7673-3924)',
+    tallaPantalon: '30',
+    tallaCalzado: '38',
+    telefono: '+505 8888-0000',
+    diasAcumulados: 4.5,
+    diasRestantes: 4.5
+  });
+
+  // Estado de amonestaciones registradas
+  const [amonestaciones, setAmonestaciones] = useState<Amonestacion[]>([]);
+  const [nuevaAmonestacion, setNuevaAmonestacion] = useState({
+    gravedad: 'LEVE' as 'LEVE' | 'MEDIA' | 'GRAVE' | 'MUY_GRAVE',
+    motivo: ''
+  });
+
+  // Formulario Nuevo Colaborador
+  const [newColaborador, setNewColaborador] = useState({
+    email: '',
+    password: '',
+    rol: 'SUPERVISOR',
+    dni: '',
+    telefono: '',
+    puesto: 'Garita Principal / Terrazas',
+    salario: '$9,500.00 / mes',
+    contactoEmergencia: '',
+    tallaPantalon: '32',
+    tallaCalzado: '40'
+  });
+
   const [modalError, setModalError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,7 +109,7 @@ export default function SupervisoresPage() {
 
   const handleAddSupervisor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
+    if (!newColaborador.email.trim() || !newColaborador.password.trim()) {
       setModalError("El correo electrónico y la contraseña son requeridos.");
       return;
     }
@@ -83,22 +119,52 @@ export default function SupervisoresPage() {
 
     try {
       await usuariosApi.createUsuario({
-        email,
-        password,
-        rol: 'SUPERVISOR'
+        email: newColaborador.email,
+        password: newColaborador.password,
+        rol: newColaborador.rol
       });
       
-      setEmail('');
-      setPassword('');
-      setShowPassword(false);
+      setNewColaborador({
+        email: '',
+        password: '',
+        rol: 'SUPERVISOR',
+        dni: '',
+        telefono: '',
+        puesto: 'Garita Principal / Terrazas',
+        salario: '$9,500.00 / mes',
+        contactoEmergencia: '',
+        tallaPantalon: '32',
+        tallaCalzado: '40'
+      });
       setShowModal(false);
       await fetchSupervisores();
     } catch (err: any) {
       console.error("Error creando supervisor:", err);
-      setModalError(err.response?.data?.message || 'Error al registrar el supervisor.');
+      setModalError(err.response?.data?.message || 'Error al registrar el supervisor. Verifique si el correo ya existe.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAgregarAmonestacion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevaAmonestacion.motivo.trim()) return;
+
+    let puntos = 1;
+    if (nuevaAmonestacion.gravedad === 'MEDIA') puntos = 2;
+    if (nuevaAmonestacion.gravedad === 'GRAVE') puntos = 3;
+    if (nuevaAmonestacion.gravedad === 'MUY_GRAVE') puntos = 5;
+
+    const creada: Amonestacion = {
+      id: Date.now(),
+      gravedad: nuevaAmonestacion.gravedad,
+      puntos,
+      motivo: nuevaAmonestacion.motivo,
+      fecha: new Date().toLocaleDateString()
+    };
+
+    setAmonestaciones([creada, ...amonestaciones]);
+    setNuevaAmonestacion({ gravedad: 'LEVE', motivo: '' });
   };
 
   const supervisoresFiltrados = supervisores.filter(sup => {
@@ -117,7 +183,7 @@ export default function SupervisoresPage() {
             Expediente de Personal & Supervisores
           </h1>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.375rem', fontSize: '0.875rem' }}>
-            Gestión de fichas completas, carnets digitales, vacaciones y KPI de amonestaciones.
+            Registro, edición de fichas completas, carnets digitales, vacaciones y amonestaciones.
           </p>
         </div>
 
@@ -139,7 +205,7 @@ export default function SupervisoresPage() {
           }}
         >
           <Plus size={18} />
-          Añadir Nuevo Supervisor
+          Registrar Nuevo Personal
         </button>
       </div>
 
@@ -184,12 +250,11 @@ export default function SupervisoresPage() {
         ) : supervisoresFiltrados.length === 0 ? (
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '3rem', borderRadius: '1rem', textAlign: 'center', border: '1px solid var(--border-color)', gridColumn: '1 / -1' }}>
             <UserCog size={48} color="var(--text-secondary)" style={{ margin: '0 auto 1rem' }} />
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>No hay supervisores registrados</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>No hay colaboradores registrados</h3>
           </div>
         ) : (
           supervisoresFiltrados.map((sup) => {
             const nombre = getNombreFromEmail(sup.email);
-            const telefono = getTelefonoById(sup.id);
 
             return (
               <div 
@@ -223,7 +288,7 @@ export default function SupervisoresPage() {
                       <Mail size={15} /> {sup.email}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Phone size={15} /> {telefono}
+                      <Phone size={15} /> {userProfileData.telefono}
                     </div>
                   </div>
                 </div>
@@ -233,6 +298,7 @@ export default function SupervisoresPage() {
                     onClick={() => {
                       setSelectedUser(sup);
                       setActiveTab('info');
+                      setIsEditing(false);
                       setShowFichaModal(true);
                     }}
                     style={{ flex: 1, padding: '0.5rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', fontWeight: '600', fontSize: '0.75rem', cursor: 'pointer' }}
@@ -255,14 +321,14 @@ export default function SupervisoresPage() {
         )}
       </div>
 
-      {/* MODAL FICHA COMPLETA DEL COLABORADOR */}
+      {/* MODAL FICHA COMPLETA Y EDITABLE DEL COLABORADOR */}
       {showFichaModal && selectedUser && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '700px', padding: '2rem', color: 'var(--text-primary)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '720px', padding: '2rem', color: 'var(--text-primary)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-card)' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
                   {getNombreFromEmail(selectedUser.email).substring(0, 2).toUpperCase()}
                 </div>
                 <div>
@@ -272,7 +338,30 @@ export default function SupervisoresPage() {
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>Expediente Digital del Colaborador</p>
                 </div>
               </div>
-              <button onClick={() => setShowFichaModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    backgroundColor: isEditing ? '#10b981' : 'var(--bg-body)',
+                    color: isEditing ? '#ffffff' : 'var(--text-primary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem'
+                  }}
+                >
+                  {isEditing ? <Save size={14} /> : <Edit size={14} />}
+                  {isEditing ? 'Guardar Cambios' : 'Editar Ficha'}
+                </button>
+
+                <button onClick={() => setShowFichaModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+              </div>
             </div>
 
             {/* Pestañas de la Ficha */}
@@ -304,22 +393,92 @@ export default function SupervisoresPage() {
             {/* PESTAÑA 1: DATOS PERSONALES & UNIFORME */}
             {activeTab === 'info' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>DNI / CÉDULA:</strong> <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>201-200571-0003P</div></div>
-                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>PUESTO DE TRABAJO:</strong> <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>Ciudad Campuzano / Garita</div></div>
-                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>SALARIO BASE:</strong> <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>$9,500.00 / mes</div></div>
-                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>CONTACTO EMERGENCIA:</strong> <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>Carlos Soto (+505 7673-3924)</div></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', backgroundColor: 'var(--bg-body)', padding: '1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '0.25rem' }}>DNI / CÉDULA</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={userProfileData.dni}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, dni: e.target.value })}
+                        style={{ width: '100%', padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{userProfileData.dni}</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '0.25rem' }}>PUESTO DE TRABAJO / ASIGNACIÓN</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={userProfileData.puesto}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, puesto: e.target.value })}
+                        style={{ width: '100%', padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{userProfileData.puesto}</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '0.25rem' }}>SALARIO BASE MENSUAL</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={userProfileData.salario}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, salario: e.target.value })}
+                        style={{ width: '100%', padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>{userProfileData.salario}</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '0.25rem' }}>CONTACTO DE EMERGENCIA</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={userProfileData.contactoEmergencia}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, contactoEmergencia: e.target.value })}
+                        style={{ width: '100%', padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{userProfileData.contactoEmergencia}</div>
+                    )}
+                  </div>
                 </div>
 
                 <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Tallas de Equipamiento & Uniformes</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div style={{ backgroundColor: 'var(--bg-body)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TALLA PANTALÓN:</span>
-                    <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>30</div>
+                  <div style={{ backgroundColor: 'var(--bg-body)', padding: '0.875rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700' }}>TALLA PANTALÓN:</span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={userProfileData.tallaPantalon}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, tallaPantalon: e.target.value })}
+                        style={{ width: '100%', padding: '0.375rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)', marginTop: '0.25rem' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '1.125rem', fontWeight: '700', marginTop: '0.25rem' }}>{userProfileData.tallaPantalon}</div>
+                    )}
                   </div>
-                  <div style={{ backgroundColor: 'var(--bg-body)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TALLA CALZADO:</span>
-                    <div style={{ fontSize: '1.125rem', fontWeight: '700' }}>38</div>
+
+                  <div style={{ backgroundColor: 'var(--bg-body)', padding: '0.875rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700' }}>TALLA CALZADO:</span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={userProfileData.tallaCalzado}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, tallaCalzado: e.target.value })}
+                        style={{ width: '100%', padding: '0.375rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)', marginTop: '0.25rem' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '1.125rem', fontWeight: '700', marginTop: '0.25rem' }}>{userProfileData.tallaCalzado}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -331,18 +490,18 @@ export default function SupervisoresPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(59, 130, 246, 0.3)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '700' }}>DÍAS ACUMULADOS</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>4.5 Días</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>{userProfileData.diasAcumulados} Días</div>
                   </div>
                   <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.3)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>DÍAS RESTANTES</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#10b981' }}>4.5 Días</div>
+                    <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#10b981' }}>{userProfileData.diasRestantes} Días</div>
                   </div>
                 </div>
 
                 <div style={{ backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Firma Digital del Empleado</h4>
                   <div style={{ border: '1px dashed var(--border-color)', borderRadius: '0.5rem', padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
-                    Firma digital registrada y verificada en sistema
+                    Firma digital registrada y verificada en el contrato laboral.
                   </div>
                 </div>
               </div>
@@ -350,7 +509,7 @@ export default function SupervisoresPage() {
 
             {/* PESTAÑA 3: AMONESTACIONES & KPIS */}
             {activeTab === 'amonestaciones' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.75rem', fontWeight: '700' }}>
                   <span style={{ backgroundColor: '#fef3c7', color: '#b45309', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>L: Leve (-1 pt)</span>
                   <span style={{ backgroundColor: '#ffedd5', color: '#c2410c', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>M: Media (-2 pts)</span>
@@ -358,9 +517,61 @@ export default function SupervisoresPage() {
                   <span style={{ backgroundColor: '#fca5a5', color: '#7f1d1d', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>MG: Muy Grave (-5 pts)</span>
                 </div>
 
-                <div style={{ backgroundColor: 'var(--bg-body)', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  Este empleado no tiene reportes ni amonestaciones registradas (KPI de Cumplimiento: 100%).
-                </div>
+                {/* Formulario para registrar amonestación */}
+                <form onSubmit={handleAgregarAmonestacion} style={{ backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <ShieldAlert size={16} color="#ef4444" /> Registrar Nueva Amonestación
+                  </h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
+                    <select
+                      value={nuevaAmonestacion.gravedad}
+                      onChange={(e) => setNuevaAmonestacion({ ...nuevaAmonestacion, gravedad: e.target.value as any })}
+                      style={{ padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)', fontSize: '0.8125rem' }}
+                    >
+                      <option value="LEVE">Leve (-1 pt)</option>
+                      <option value="MEDIA">Media (-2 pts)</option>
+                      <option value="GRAVE">Grave (-3 pts)</option>
+                      <option value="MUY_GRAVE">Muy Grave (-5 pts)</option>
+                    </select>
+
+                    <input
+                      type="text"
+                      placeholder="Motivo de la sanción o llamada de atención..."
+                      value={nuevaAmonestacion.motivo}
+                      onChange={(e) => setNuevaAmonestacion({ ...nuevaAmonestacion, motivo: e.target.value })}
+                      style={{ padding: '0.5rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)', fontSize: '0.8125rem' }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{ alignSelf: 'flex-end', padding: '0.375rem 1rem', backgroundColor: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '0.375rem', fontWeight: '700', fontSize: '0.75rem', cursor: 'pointer' }}
+                  >
+                    Guardar Sanción
+                  </button>
+                </form>
+
+                {/* Lista de Amonestaciones */}
+                {amonestaciones.length === 0 ? (
+                  <div style={{ backgroundColor: 'var(--bg-body)', padding: '1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                    Este empleado no tiene reportes ni amonestaciones registradas (KPI de Cumplimiento: 100%).
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {amonestaciones.map((a) => (
+                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-body)', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                        <div>
+                          <div style={{ fontWeight: '700', fontSize: '0.8125rem', color: 'var(--text-primary)' }}>{a.motivo}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{a.fecha}</div>
+                        </div>
+                        <span style={{ padding: '0.25rem 0.5rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '0.25rem', fontWeight: '700', fontSize: '0.75rem' }}>
+                          -{a.puntos} Pts ({a.gravedad})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -373,7 +584,6 @@ export default function SupervisoresPage() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
             
-            {/* Diseño del Carnet Físico / Digital */}
             <div style={{ 
               width: '320px', 
               height: '480px', 
@@ -387,13 +597,11 @@ export default function SupervisoresPage() {
               border: '2px solid #e2e8f0',
               position: 'relative'
             }}>
-              {/* Encabezado Institucional */}
               <div style={{ backgroundColor: '#0f172a', padding: '1rem', textAlign: 'center', borderBottom: '4px solid #ef4444' }}>
                 <div style={{ fontSize: '0.9375rem', fontWeight: '800', color: '#ffffff', letterSpacing: '0.05em' }}>NEW CENTURY</div>
                 <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: '700' }}>SECURITY S.A.</div>
               </div>
 
-              {/* Foto de Perfil */}
               <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                 <div style={{ width: '110px', height: '110px', borderRadius: '50%', backgroundColor: '#f1f5f9', border: '3px solid #3b82f6', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: '800', color: '#1e293b' }}>
                   {getNombreFromEmail(selectedUser.email).substring(0, 2).toUpperCase()}
@@ -406,20 +614,17 @@ export default function SupervisoresPage() {
                 </div>
               </div>
 
-              {/* Información Físico-Laboral */}
               <div style={{ backgroundColor: '#f8fafc', padding: '0.75rem 1.25rem', fontSize: '0.75rem', color: '#334155', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                <div><strong>DNI:</strong> 201-200571-0003P</div>
-                <div><strong>Lugar de Trabajo:</strong> Ciudad Campuzano</div>
+                <div><strong>DNI:</strong> {userProfileData.dni}</div>
+                <div><strong>Lugar de Trabajo:</strong> {userProfileData.puesto}</div>
                 <div><strong>Estado:</strong> <span style={{ color: '#10b981', fontWeight: '700' }}>ACTIVO</span></div>
               </div>
 
-              {/* Footer Institucional */}
               <div style={{ backgroundColor: '#0f172a', padding: '0.75rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.65rem' }}>
                 ¡Tu tranquilidad, nuestra prioridad!
               </div>
             </div>
 
-            {/* Botones del Carnet */}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button 
                 onClick={() => window.print()} 
@@ -439,12 +644,12 @@ export default function SupervisoresPage() {
         </div>
       )}
 
-      {/* MODAL CREAR SUPERVISOR */}
+      {/* MODAL REGISTRAR NUEVO PERSONAL / SUPERVISOR */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '420px', padding: '1.75rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '580px', padding: '1.75rem', color: 'var(--text-primary)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Añadir Nuevo Supervisor</h3>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>Registrar Nuevo Personal / Supervisor</h3>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
@@ -454,33 +659,109 @@ export default function SupervisoresPage() {
                   {modalError}
                 </div>
               )}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Correo Electrónico *</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="Ej. supervisor@ncs365.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
-                />
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Correo Electrónico *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="Ej. guardia@ncsecurity.net"
+                    value={newColaborador.email}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, email: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Contraseña Temporal *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={newColaborador.password}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, password: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Contraseña Temporal *</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Rol Operativo</label>
+                  <select
+                    value={newColaborador.rol}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, rol: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  >
+                    <option value="SUPERVISOR">Supervisor de Seguridad</option>
+                    <option value="GUARDIA">Guarda de Garita</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Cédula / DNI</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 201-200571-0003P"
+                    value={newColaborador.dni}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, dni: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Puesto de Trabajo</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Garita Principal / Terrazas"
+                    value={newColaborador.puesto}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, puesto: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Salario Base Mensual</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. $9,500.00 / mes"
+                    value={newColaborador.salario}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, salario: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Talla de Pantalón</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 30"
+                    value={newColaborador.tallaPantalon}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, tallaPantalon: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Talla de Calzado</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 40"
+                    value={newColaborador.tallaCalzado}
+                    onChange={(e) => setNewColaborador({ ...newColaborador, tallaCalzado: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
                 <button type="button" onClick={() => setShowModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" disabled={isSubmitting} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#f59e0b', color: '#000', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>Registrar</button>
+                <button type="submit" disabled={isSubmitting} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#f59e0b', color: '#000', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>Guardar Colaborador</button>
               </div>
             </form>
           </div>
