@@ -63,7 +63,9 @@ export default function SupervisoresPage() {
     tallaPantalon: '30',
     tallaCalzado: '38',
     telefono: '+505 8888-0000',
+    fechaIngreso: '2025-01-15',
     diasAcumulados: 4.5,
+    diasTomados: 0,
     diasRestantes: 4.5
   });
 
@@ -484,45 +486,83 @@ export default function SupervisoresPage() {
               </div>
             )}
 
-            {/* PESTAÑA 2: VACACIONES & FIRMA DIGITAL */}
+            {/* PESTAÑA 2: VACACIONES & FIRMA DIGITAL (CÓDIGO DEL TRABAJO DE NICARAGUA - LEY 185) */}
             {activeTab === 'vacaciones' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                
+                {/* Banner de Legislación de Nicaragua */}
+                <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '0.875rem 1rem', borderRadius: '0.5rem', border: '1px solid rgba(59, 130, 246, 0.25)', fontSize: '0.8125rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <Award size={20} color="var(--primary)" />
+                  <div>
+                    <strong>Cálculo según Código del Trabajo de Nicaragua (Ley No. 185 - Art. 76):</strong>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>
+                      Acumulación de 15 días continuos remunerados por cada 6 meses continuos de trabajo (tasa de <strong>2.5 días por mes laborado</strong>).
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div style={{ backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '700' }}>FECHA DE INGRESO</div>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={userProfileData.fechaIngreso || '2025-01-15'}
+                        onChange={(e) => {
+                          const nuevaFecha = e.target.value;
+                          const ingreso = new Date(nuevaFecha);
+                          const hoy = new Date();
+                          const meses = Math.max(0, (hoy.getFullYear() - ingreso.getFullYear()) * 12 + (hoy.getMonth() - ingreso.getMonth()));
+                          const calculados = parseFloat((meses * 2.5).toFixed(1));
+                          setUserProfileData({ 
+                            ...userProfileData, 
+                            fechaIngreso: nuevaFecha,
+                            diasAcumulados: calculados,
+                            diasRestantes: Math.max(0, calculados - (userProfileData.diasTomados || 0))
+                          });
+                        }}
+                        style={{ width: '100%', marginTop: '0.5rem', padding: '0.375rem', textAlign: 'center', fontWeight: '700', fontSize: '0.875rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', color: 'var(--text-primary)' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '1rem', fontWeight: '800', marginTop: '0.5rem', color: 'var(--text-primary)' }}>{userProfileData.fechaIngreso || '15/01/2025'}</div>
+                    )}
+                  </div>
+
                   <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(59, 130, 246, 0.3)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '700' }}>DÍAS ACUMULADOS</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '700' }}>DÍAS ACUMULADOS (LEY 185)</div>
                     {isEditing ? (
                       <input
                         type="number"
                         step="0.5"
                         value={userProfileData.diasAcumulados}
                         onChange={(e) => setUserProfileData({ ...userProfileData, diasAcumulados: parseFloat(e.target.value) || 0 })}
-                        style={{ width: '100px', margin: '0.5rem auto 0', padding: '0.375rem', textAlign: 'center', fontWeight: '800', fontSize: '1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '0.375rem', color: 'var(--primary)' }}
+                        style={{ width: '90px', margin: '0.5rem auto 0', padding: '0.375rem', textAlign: 'center', fontWeight: '800', fontSize: '1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '0.375rem', color: 'var(--primary)' }}
                       />
                     ) : (
-                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>{userProfileData.diasAcumulados} Días</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.25rem', color: 'var(--primary)' }}>{userProfileData.diasAcumulados} Días</div>
                     )}
                   </div>
 
                   <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.3)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>DÍAS RESTANTES</div>
+                    <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>SALDO DISPONIBLE</div>
                     {isEditing ? (
                       <input
                         type="number"
                         step="0.5"
                         value={userProfileData.diasRestantes}
                         onChange={(e) => setUserProfileData({ ...userProfileData, diasRestantes: parseFloat(e.target.value) || 0 })}
-                        style={{ width: '100px', margin: '0.5rem auto 0', padding: '0.375rem', textAlign: 'center', fontWeight: '800', fontSize: '1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid #10b981', borderRadius: '0.375rem', color: '#10b981' }}
+                        style={{ width: '90px', margin: '0.5rem auto 0', padding: '0.375rem', textAlign: 'center', fontWeight: '800', fontSize: '1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid #10b981', borderRadius: '0.375rem', color: '#10b981' }}
                       />
                     ) : (
-                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#10b981' }}>{userProfileData.diasRestantes} Días</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.25rem', color: '#10b981' }}>{userProfileData.diasRestantes} Días</div>
                     )}
                   </div>
                 </div>
 
                 <div style={{ backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
                   <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Firma Digital del Empleado</h4>
-                  <div style={{ border: '1px dashed var(--border-color)', borderRadius: '0.5rem', padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
-                    Firma digital registrada y verificada en el contrato laboral.
+                  <div style={{ border: '1px dashed var(--border-color)', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
+                    Firma digital registrada y verificada en el expediente laboral bajo la legislación laboral nicaragüense.
                   </div>
                 </div>
               </div>
