@@ -166,17 +166,23 @@ export default function OperativeMapPage() {
                 <p style={{ fontSize: '0.875rem', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No hay guardias transmitiendo su ubicación en este momento.</p>
               ) : (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {guardiasLive.map(g => (
-                    <li key={g.usuario_id} style={{ padding: '0.75rem', backgroundColor: '#1e293b', borderRadius: '0.5rem', border: '1px solid #334155' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', color: '#ffffff', fontWeight: '500', marginBottom: '0.25rem' }}>
-                        <Users size={16} color="#FACC15" style={{ marginRight: '0.5rem' }} />
-                        Guardia ID: {g.usuario_id}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                        Actualizado: {g.ultima_actualizacion}
-                      </div>
-                    </li>
-                  ))}
+                  {guardiasLive.map(g => {
+                    const nombre = g.email ? g.email.split('@')[0].replace(/[\._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : `Guardia #${g.usuario_id}`;
+                    return (
+                      <li key={g.usuario_id} style={{ padding: '0.75rem', backgroundColor: '#1e293b', borderRadius: '0.5rem', border: '1px solid #334155' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', color: '#ffffff', fontWeight: '600', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                          <Users size={16} color="#FACC15" style={{ marginRight: '0.5rem' }} />
+                          {nombre}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          {g.email} (ID: {g.usuario_id})
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#10B981', marginTop: '0.25rem' }}>
+                          • Señal en vivo activada
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

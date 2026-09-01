@@ -5,13 +5,32 @@ import 'leaflet/dist/leaflet.css';
 import { Ubicacion, HistorialUbicacion } from '@/lib/api';
 import L from 'leaflet';
 
-// Arreglar iconos de Leaflet en Next.js
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+const getNombreFromEmail = (email?: string, id?: number) => {
+  if (!email) return `Guardia #${id || ''}`;
+  const prefix = email.split('@')[0];
+  return prefix
+    .replace(/[\._\-]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+};
+
+const createCustomGuardIcon = (nombre: string) => {
+  return L.divIcon({
+    className: 'custom-guard-pin',
+    html: `
+      <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; position: relative;">
+        <div style="background-color: #0F172A; color: #FACC15; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; border: 1.5px solid #FACC15; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.4); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+          <span>👮‍♂️</span> <span>${nombre}</span>
+        </div>
+        <div style="width: 26px; height: 26px; background-color: #2563EB; border: 2.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 10px; height: 10px; background-color: #10B981; border-radius: 50%;"></div>
+        </div>
+        <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #2563EB; margin-top: -1px;"></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+};
 
 interface MapProps {
   guardiasActivos: Ubicacion[];
@@ -38,16 +57,31 @@ export default function MapContainerComponent({ guardiasActivos, historial, most
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {!mostrarHistorial && guardiasActivos.map((guardia) => (
-        <Marker key={guardia.usuario_id} position={[guardia.latitud, guardia.longitud]}>
-          <Popup>
-            <div style={{ color: '#000' }}>
-              <strong>Guardia ID:</strong> {guardia.usuario_id} <br />
-              <strong>Actualizado:</strong> {guardia.ultima_actualizacion}
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+      {!mostrarHistorial && guardiasActivos.map((guardia) => {
+        const nombreGuardia = getNombreFromEmail(guardia.email, guardia.usuario_id);
+        const icon = createCustomGuardIcon(nombreGuardia);
+
+        return (
+          <Marker 
+            key={guardia.usuario_id} 
+            position={[guardia.latitud, guardia.longitud]}
+            icon={icon}
+          >
+            <Popup>
+              <div style={{ color: '#0f172a', padding: '4px' }}>
+                <strong style={{ fontSize: '14px', color: '#2563EB' }}>👮‍♂️ {nombreGuardia}</strong><br />
+                <span style={{ fontSize: '12px', color: '#64748b' }}>{guardia.email}</span><br />
+                <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '6px 0' }} />
+                <span style={{ fontSize: '11px', color: '#475569' }}>
+                  <strong>ID:</strong> #{guardia.usuario_id} <br />
+                  <strong>Lat:</strong> {guardia.latitud.toFixed(5)}, <strong>Lng:</strong> {guardia.longitud.toFixed(5)} <br />
+                  <strong>Última señal:</strong> {guardia.ultima_actualizacion ? new Date(guardia.ultima_actualizacion).toLocaleTimeString() : 'Hace instantes'}
+                </span>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {mostrarHistorial && polylinePositions.length > 0 && (
         <>

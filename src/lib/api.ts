@@ -309,10 +309,12 @@ export const finanzasApi = {
 
 export interface Ubicacion {
   usuario_id: number;
+  email?: string;
   latitud: number;
   longitud: number;
   ultima_actualizacion?: string;
-  nombre?: string; // Podríamos cruzarlo en el componente o pedirlo al backend
+  actualizado_en?: string;
+  nombre?: string;
 }
 
 export interface HistorialUbicacion {
