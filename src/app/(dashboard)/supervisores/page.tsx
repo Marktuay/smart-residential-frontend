@@ -490,11 +490,32 @@ export default function SupervisoresPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(59, 130, 246, 0.3)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: '700' }}>DÍAS ACUMULADOS</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>{userProfileData.diasAcumulados} Días</div>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={userProfileData.diasAcumulados}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, diasAcumulados: parseFloat(e.target.value) || 0 })}
+                        style={{ width: '100px', margin: '0.5rem auto 0', padding: '0.375rem', textAlign: 'center', fontWeight: '800', fontSize: '1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '0.375rem', color: 'var(--primary)' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--primary)' }}>{userProfileData.diasAcumulados} Días</div>
+                    )}
                   </div>
+
                   <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid rgba(16, 185, 129, 0.3)', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>DÍAS RESTANTES</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#10b981' }}>{userProfileData.diasRestantes} Días</div>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        step="0.5"
+                        value={userProfileData.diasRestantes}
+                        onChange={(e) => setUserProfileData({ ...userProfileData, diasRestantes: parseFloat(e.target.value) || 0 })}
+                        style={{ width: '100px', margin: '0.5rem auto 0', padding: '0.375rem', textAlign: 'center', fontWeight: '800', fontSize: '1.25rem', backgroundColor: 'var(--bg-card)', border: '1px solid #10b981', borderRadius: '0.375rem', color: '#10b981' }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#10b981' }}>{userProfileData.diasRestantes} Días</div>
+                    )}
                   </div>
                 </div>
 
