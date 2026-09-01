@@ -18,8 +18,7 @@ import {
   CheckCircle, 
   LogOut, 
   UserCheck,
-  Filter,
-  ArrowUpDown
+  Filter
 } from 'lucide-react';
 
 const MEDIOS_INGRESO = [
@@ -133,15 +132,15 @@ export default function VisitasPage() {
   });
 
   return (
-    <div style={{ padding: '2rem', color: '#f8fafc', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* Encabezado e Indicadores */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.875rem', fontWeight: '800', color: '#ffffff', margin: 0, letterSpacing: '-0.025em' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
             Bitácora de Visitas / Control de Accesos
           </h1>
-          <p style={{ color: '#94a3b8', marginTop: '0.375rem', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.375rem', fontSize: '0.875rem' }}>
             Gestión en tiempo real de ingresos, salidas y notificaciones para residentes.
           </p>
         </div>
@@ -157,11 +156,11 @@ export default function VisitasPage() {
             border: 'none', 
             padding: '0.75rem 1.5rem', 
             borderRadius: '0.625rem', 
-            fontWeight: '800', 
+            fontWeight: '700', 
             fontSize: '0.9375rem',
             cursor: 'pointer',
             boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
-            transition: 'all 0.2s ease-in-out'
+            transition: 'transform 0.2s ease'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
@@ -176,17 +175,17 @@ export default function VisitasPage() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        marginBottom: '1.5rem', 
         gap: '1rem', 
         flexWrap: 'wrap',
-        backgroundColor: '#1e293b',
+        backgroundColor: 'var(--bg-card)',
         padding: '1rem 1.25rem',
         borderRadius: '0.75rem',
-        border: '1px solid #334155'
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--shadow-sm)'
       }}>
         {/* Input de Búsqueda */}
         <div style={{ position: 'relative', flex: '1', minWidth: '260px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+          <Search size={18} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
           <input
             type="text"
             placeholder="Buscar por visitante, cédula o número de casa..."
@@ -195,10 +194,10 @@ export default function VisitasPage() {
             style={{
               width: '100%',
               padding: '0.625rem 1rem 0.625rem 2.625rem',
-              backgroundColor: '#0f172a',
-              border: '1px solid #334155',
+              backgroundColor: 'var(--bg-body)',
+              border: '1px solid var(--border-color)',
               borderRadius: '0.5rem',
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               fontSize: '0.875rem',
               outline: 'none'
             }}
@@ -207,9 +206,9 @@ export default function VisitasPage() {
 
         {/* Filtros por Estado */}
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <Filter size={16} color="#94a3b8" />
-          <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontWeight: '600' }}>Estado:</span>
-          <div style={{ display: 'flex', backgroundColor: '#0f172a', borderRadius: '0.5rem', padding: '0.25rem', border: '1px solid #334155' }}>
+          <Filter size={16} color="var(--text-secondary)" />
+          <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Estado:</span>
+          <div style={{ display: 'flex', backgroundColor: 'var(--bg-body)', borderRadius: '0.5rem', padding: '0.25rem', border: '1px solid var(--border-color)' }}>
             {['TODOS', 'INGRESÓ', 'PROGRAMADA', 'FINALIZADA'].map((st) => (
               <button
                 key={st}
@@ -218,8 +217,8 @@ export default function VisitasPage() {
                   padding: '0.375rem 0.75rem',
                   border: 'none',
                   borderRadius: '0.375rem',
-                  backgroundColor: filterEstado === st ? '#3b82f6' : 'transparent',
-                  color: filterEstado === st ? '#ffffff' : '#94a3b8',
+                  backgroundColor: filterEstado === st ? 'var(--primary)' : 'transparent',
+                  color: filterEstado === st ? '#ffffff' : 'var(--text-secondary)',
                   fontSize: '0.75rem',
                   fontWeight: '700',
                   cursor: 'pointer',
@@ -235,16 +234,16 @@ export default function VisitasPage() {
 
       {/* Tabla Estilizada de Visitas */}
       <div style={{ 
-        backgroundColor: '#1e293b', 
+        backgroundColor: 'var(--bg-card)', 
         borderRadius: '1rem', 
-        border: '1px solid #334155', 
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+        border: '1px solid var(--border-color)', 
+        boxShadow: 'var(--shadow-card)',
         overflow: 'hidden' 
       }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
-              <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #334155', color: '#94a3b8', textAlign: 'left', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
+              <tr style={{ backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', textAlign: 'left', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>
                 <th style={{ padding: '1rem 1.25rem' }}>Visitante</th>
                 <th style={{ padding: '1rem 1.25rem' }}>Identificación / Cédula</th>
                 <th style={{ padding: '1rem 1.25rem' }}>Destino</th>
@@ -256,13 +255,13 @@ export default function VisitasPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     Cargando bitácora de accesos...
                   </td>
                 </tr>
               ) : filteredVisitas.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     No se encontraron registros de visitas para el filtro seleccionado.
                   </td>
                 </tr>
@@ -274,34 +273,34 @@ export default function VisitasPage() {
                   return (
                     <tr 
                       key={v.id} 
-                      style={{ borderBottom: '1px solid #334155', transition: 'background-color 0.15s ease' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(51, 65, 85, 0.4)'}
+                      style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.15s ease' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(243, 244, 246, 0.6)'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <td style={{ padding: '1rem 1.25rem', fontWeight: '700', color: '#ffffff' }}>
+                      <td style={{ padding: '1rem 1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#334155', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8125rem' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8125rem' }}>
                             {v.nombre_visitante.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div>{v.nombre_visitante}</div>
-                            {v.fecha_esperada && <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'normal' }}>{v.fecha_esperada}</div>}
+                            <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{v.nombre_visitante}</div>
+                            {v.fecha_esperada && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>{v.fecha_esperada}</div>}
                           </div>
                         </div>
                       </td>
 
-                      <td style={{ padding: '1rem 1.25rem', color: '#cbd5e1', fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                      <td style={{ padding: '1rem 1.25rem', color: 'var(--text-secondary)', fontFamily: 'monospace', fontSize: '0.875rem' }}>
                         {v.cedula_visitante || 'No especificada'}
                       </td>
 
                       <td style={{ padding: '1rem 1.25rem' }}>
-                        <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '0.25rem 0.625rem', borderRadius: '0.375rem', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: '800', fontSize: '0.8125rem' }}>
+                        <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#d97706', padding: '0.25rem 0.625rem', borderRadius: '0.375rem', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: '700', fontSize: '0.8125rem' }}>
                           Casa {v.numero_casa}
                         </span>
                       </td>
 
-                      <td style={{ padding: '1rem 1.25rem', color: '#cbd5e1' }}>
-                        <span style={{ backgroundColor: '#0f172a', padding: '0.375rem 0.625rem', borderRadius: '0.375rem', border: '1px solid #334155', fontSize: '0.75rem', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <td style={{ padding: '1rem 1.25rem', color: 'var(--text-secondary)' }}>
+                        <span style={{ backgroundColor: 'var(--bg-body)', padding: '0.375rem 0.625rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}>
                           {v.medio_ingreso} {v.placa_vehiculo ? `(${v.placa_vehiculo})` : ''}
                         </span>
                       </td>
@@ -311,10 +310,10 @@ export default function VisitasPage() {
                           padding: '0.25rem 0.75rem', 
                           borderRadius: '1rem', 
                           fontSize: '0.75rem', 
-                          fontWeight: '800',
-                          backgroundColor: isEntered ? 'rgba(34, 197, 94, 0.2)' : isFinished ? 'rgba(148, 163, 184, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                          color: isEntered ? '#4ade80' : isFinished ? '#94a3b8' : '#fcd34d',
-                          border: isEntered ? '1px solid rgba(34, 197, 94, 0.3)' : isFinished ? '1px solid #475569' : '1px solid rgba(245, 158, 11, 0.3)'
+                          fontWeight: '700',
+                          backgroundColor: isEntered ? 'rgba(16, 185, 129, 0.15)' : isFinished ? 'rgba(107, 114, 128, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                          color: isEntered ? '#059669' : isFinished ? '#4b5563' : '#d97706',
+                          border: isEntered ? '1px solid rgba(16, 185, 129, 0.3)' : isFinished ? '1px solid #d1d5db' : '1px solid rgba(245, 158, 11, 0.3)'
                         }}>
                           {v.estado}
                         </span>
@@ -330,9 +329,9 @@ export default function VisitasPage() {
                             }}
                             style={{ 
                               padding: '0.375rem 0.75rem', 
-                              backgroundColor: '#0f172a', 
-                              color: '#38bdf8', 
-                              border: '1px solid #38bdf8', 
+                              backgroundColor: 'var(--bg-card)', 
+                              color: 'var(--primary)', 
+                              border: '1px solid var(--primary)', 
                               borderRadius: '0.375rem', 
                               fontSize: '0.75rem', 
                               fontWeight: '700',
@@ -358,7 +357,7 @@ export default function VisitasPage() {
                                 fontSize: '0.75rem', 
                                 fontWeight: '700',
                                 cursor: 'pointer',
-                                boxShadow: isEntered ? '0 2px 6px rgba(239, 68, 68, 0.3)' : '0 2px 6px rgba(16, 185, 129, 0.3)'
+                                boxShadow: 'var(--shadow-sm)'
                               }}
                             >
                               {isEntered ? 'Marcar Salida' : 'Marcar Ingreso'}
@@ -377,21 +376,21 @@ export default function VisitasPage() {
 
       {/* MODAL REGISTRAR NUEVA VISITA */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '520px', padding: '2rem', color: '#ffffff', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '520px', padding: '2rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Shield style={{ color: '#f59e0b' }} size={24} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>Registrar Nueva Visita</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Registrar Nueva Visita</h3>
               </div>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '0.375rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>
                   Nombre del Visitante *
                 </label>
                 <input
@@ -400,13 +399,13 @@ export default function VisitasPage() {
                   placeholder="Ej. Cristhofer Martínez"
                   value={newVisita.nombre_visitante}
                   onChange={(e) => setNewVisita({ ...newVisita, nombre_visitante: e.target.value })}
-                  style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#ffffff', fontSize: '0.9375rem', outline: 'none' }}
+                  style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.9375rem', outline: 'none' }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '0.375rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>
                     Cédula / Identificación
                   </label>
                   <input
@@ -414,11 +413,11 @@ export default function VisitasPage() {
                     placeholder="Ej. 001-220887-0051"
                     value={newVisita.cedula_visitante}
                     onChange={(e) => setNewVisita({ ...newVisita, cedula_visitante: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#ffffff', fontSize: '0.875rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '0.375rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>
                     Número de Casa Destino *
                   </label>
                   <input
@@ -427,20 +426,20 @@ export default function VisitasPage() {
                     placeholder="Ej. Casa A29"
                     value={newVisita.numero_casa}
                     onChange={(e) => setNewVisita({ ...newVisita, numero_casa: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#ffffff', fontSize: '0.875rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '0.375rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>
                     Medio de Ingreso
                   </label>
                   <select
                     value={newVisita.medio_ingreso}
                     onChange={(e) => setNewVisita({ ...newVisita, medio_ingreso: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#ffffff', fontSize: '0.875rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   >
                     {MEDIOS_INGRESO.map(m => (
                       <option key={m.value} value={m.value}>{m.label}</option>
@@ -448,7 +447,7 @@ export default function VisitasPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#cbd5e1', fontWeight: '700', marginBottom: '0.375rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>
                     Placa de Vehículo (Opcional)
                   </label>
                   <input
@@ -456,7 +455,7 @@ export default function VisitasPage() {
                     placeholder="Ej. M 123456"
                     value={newVisita.placa_vehiculo}
                     onChange={(e) => setNewVisita({ ...newVisita, placa_vehiculo: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#ffffff', fontSize: '0.875rem', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>
               </div>
@@ -465,13 +464,13 @@ export default function VisitasPage() {
                 <button 
                   type="button" 
                   onClick={() => setShowForm(false)} 
-                  style={{ padding: '0.75rem 1.25rem', backgroundColor: '#334155', color: '#ffffff', border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}
+                  style={{ padding: '0.75rem 1.25rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
-                  style={{ padding: '0.75rem 1.5rem', backgroundColor: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '0.5rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)' }}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Guardar Visita
                 </button>
@@ -483,14 +482,14 @@ export default function VisitasPage() {
 
       {/* MODAL DE NOTIFICACIÓN DE VISITA */}
       {showNotifyModal && selectedVisitaForNotify && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '420px', padding: '2rem', color: '#ffffff', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '420px', padding: '2rem', color: 'var(--text-primary)', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
               <Bell size={28} />
             </div>
             
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '0.5rem' }}>¿Enviar Notificación?</h3>
-            <p style={{ fontSize: '0.875rem', color: '#cbd5e1', marginBottom: '1.75rem', lineHeight: '1.5' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>¿Enviar Notificación?</h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.75rem', lineHeight: '1.5' }}>
               Notificar al residente de la <strong>Casa {selectedVisitaForNotify.numero_casa}</strong> sobre el ingreso de <strong>{selectedVisitaForNotify.nombre_visitante}</strong>.
             </p>
 
@@ -504,14 +503,13 @@ export default function VisitasPage() {
                   backgroundColor: '#25D366',
                   color: '#ffffff',
                   borderRadius: '0.5rem',
-                  fontWeight: '800',
+                  fontWeight: '700',
                   fontSize: '0.9375rem',
                   textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.625rem',
-                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)'
+                  gap: '0.625rem'
                 }}
               >
                 <MessageSquare size={20} /> Vía WhatsApp Directo
@@ -524,18 +522,17 @@ export default function VisitasPage() {
                 }}
                 style={{
                   padding: '0.875rem',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: 'var(--primary)',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '0.5rem',
-                  fontWeight: '800',
+                  fontWeight: '700',
                   fontSize: '0.9375rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.625rem',
-                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                  gap: '0.625rem'
                 }}
               >
                 <Smartphone size={20} /> Vía Notificación Push / App
@@ -545,9 +542,9 @@ export default function VisitasPage() {
                 onClick={() => setShowNotifyModal(false)}
                 style={{
                   padding: '0.625rem',
-                  backgroundColor: '#334155',
-                  color: '#94a3b8',
-                  border: 'none',
+                  backgroundColor: 'var(--bg-body)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   fontWeight: '600',

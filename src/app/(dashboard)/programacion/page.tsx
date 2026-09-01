@@ -18,8 +18,6 @@ import {
   Users,
   Grid,
   Filter,
-  Download,
-  Layers,
   Sparkles
 } from 'lucide-react';
 import { turnosApi, usuariosApi, Turno, Usuario } from '@/lib/api';
@@ -27,37 +25,31 @@ import { turnosApi, usuariosApi, Turno, Usuario } from '@/lib/api';
 export default function ProgramacionPage() {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [guardias, setGuardias] = useState<Usuario[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); // Agosto 2026 por defecto
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
   const [userRole, setUserRole] = useState<string>('');
 
-  // Vista activa: 'grid' (Matriz de Colaboradores) | 'calendar' (Mensual)
   const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
   
-  // Modales
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMassiveModal, setShowMassiveModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   
-  // Selección
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTurno, setSelectedTurno] = useState<Turno | null>(null);
   
-  // Carga y Errores
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
 
-  // Formulario Individual
   const [guardiaId, setGuardiaId] = useState<number>(0);
   const [fecha, setFecha] = useState<string>('');
-  const [tipoTurno, setTipoTurno] = useState<string>('TD'); // TD (Diurno) | TN (Nocturno) | EXTRA
+  const [tipoTurno, setTipoTurno] = useState<string>('TD');
   const [horaInicio, setHoraInicio] = useState<string>('07:00');
   const [horaFin, setHoraFin] = useState<string>('19:00');
   const [ubicacion, setUbicacion] = useState<string>('');
   const [descripcion, setDescripcion] = useState<string>('');
 
-  // Formulario Programador Masivo
   const [selectedGuardiaIds, setSelectedGuardiaIds] = useState<number[]>([]);
   const [mDesde, setMDesde] = useState<string>('');
   const [mHasta, setMHasta] = useState<string>('');
@@ -103,7 +95,6 @@ export default function ProgramacionPage() {
     }
   };
 
-  // Navegación de Fecha
   const nextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
@@ -116,7 +107,6 @@ export default function ProgramacionPage() {
     setCurrentDate(new Date());
   };
 
-  // Obtener días del mes actual
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -139,7 +129,6 @@ export default function ProgramacionPage() {
     return `${year}-${m}-${dayStr}`;
   };
 
-  // Crear Turno Individual
   const handleCreateTurno = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guardiaId || !fecha || !ubicacion) {
@@ -147,7 +136,6 @@ export default function ProgramacionPage() {
       return;
     }
 
-    // Validar duplicidad
     const exists = turnos.some(t => t.guardia_id === guardiaId && t.fecha === fecha && t.hora_inicio === horaInicio);
     if (exists) {
       showNotification('El colaborador ya tiene asignado un turno en esa fecha y horario.', 'error');
@@ -179,7 +167,6 @@ export default function ProgramacionPage() {
     }
   };
 
-  // Crear Programación Masiva
   const handleMassiveCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedGuardiaIds.length === 0) {
@@ -215,7 +202,6 @@ export default function ProgramacionPage() {
         const dateStr = d.toISOString().split('T')[0];
 
         for (const gId of selectedGuardiaIds) {
-          // Evitar duplicados
           const exists = turnos.some(t => t.guardia_id === gId && t.fecha === dateStr && t.hora_inicio === hInicio);
           if (!exists) {
             const turno: Turno = {
@@ -298,26 +284,25 @@ export default function ProgramacionPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: '#fff' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
       {/* Encabezado y Selector de Vista */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>Gráfico de Turnos & Rol de Guardias</h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Visualiza y gestiona la programación del personal de seguridad</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Gráfico de Turnos & Rol de Guardias</h1>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.375rem', fontSize: '0.875rem' }}>Visualiza y gestiona la programación del personal de seguridad</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Alternar Vista GRID vs Calendario */}
-          <div style={{ backgroundColor: '#1e293b', borderRadius: '0.5rem', padding: '0.25rem', display: 'flex', gap: '0.25rem', border: '1px solid #334155' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '0.5rem', padding: '0.25rem', display: 'flex', gap: '0.25rem', border: '1px solid var(--border-color)' }}>
             <button
               onClick={() => setViewMode('grid')}
               style={{
                 padding: '0.5rem 0.75rem',
                 borderRadius: '0.375rem',
                 border: 'none',
-                backgroundColor: viewMode === 'grid' ? '#3b82f6' : 'transparent',
-                color: '#fff',
+                backgroundColor: viewMode === 'grid' ? 'var(--primary)' : 'transparent',
+                color: viewMode === 'grid' ? '#fff' : 'var(--text-secondary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -334,8 +319,8 @@ export default function ProgramacionPage() {
                 padding: '0.5rem 0.75rem',
                 borderRadius: '0.375rem',
                 border: 'none',
-                backgroundColor: viewMode === 'calendar' ? '#3b82f6' : 'transparent',
-                color: '#fff',
+                backgroundColor: viewMode === 'calendar' ? 'var(--primary)' : 'transparent',
+                color: viewMode === 'calendar' ? '#fff' : 'var(--text-secondary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -372,54 +357,51 @@ export default function ProgramacionPage() {
         </div>
       </div>
 
-      {/* Alertas */}
       {error && (
-        <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#fca5a5', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <AlertCircle size={18} /> {error}
         </div>
       )}
       {successMsg && (
-        <div style={{ padding: '1rem', backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '1px solid #22c55e', color: '#86efac', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid #10b981', color: '#10b981', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <CheckCircle2 size={18} /> {successMsg}
         </div>
       )}
 
-      {/* Controles de Navegación de Mes */}
-      <div style={{ backgroundColor: '#1e293b', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ backgroundColor: 'var(--bg-card)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff', textTransform: 'capitalize' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', textTransform: 'capitalize' }}>
             {getMonthName(month)} {year}
           </h2>
-          <button onClick={setMonthToday} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.375rem', fontSize: '0.75rem', cursor: 'pointer' }}>
+          <button onClick={setMonthToday} style={{ padding: '0.375rem 0.75rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', fontSize: '0.75rem', cursor: 'pointer' }}>
             Hoy
           </button>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={prevMonth} style={{ padding: '0.5rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>
+          <button onClick={prevMonth} style={{ padding: '0.5rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: 'pointer' }}>
             <ChevronLeft size={20} />
           </button>
-          <button onClick={nextMonth} style={{ padding: '0.5rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>
+          <button onClick={nextMonth} style={{ padding: '0.5rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.375rem', cursor: 'pointer' }}>
             <ChevronRight size={20} />
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Cargando matriz de turnos...</div>
+        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando matriz de turnos...</div>
       ) : (
         <>
-          {/* VISTA 1: MATRIZ GRID POR COLABORADOR */}
           {viewMode === 'grid' && (
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '0.75rem', border: '1px solid #334155', overflowX: 'auto' }}>
+            <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '0.75rem', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', minWidth: '180px', color: '#94a3b8', fontWeight: '600', position: 'sticky', left: 0, backgroundColor: '#0f172a', zIndex: 10 }}>
+                  <tr style={{ backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', minWidth: '180px', color: 'var(--text-secondary)', fontWeight: '600', position: 'sticky', left: 0, backgroundColor: 'var(--bg-body)', zIndex: 10 }}>
                       Colaborador
                     </th>
                     {daysArray.map(d => (
-                      <th key={d} style={{ padding: '0.5rem 0.25rem', textAlign: 'center', minWidth: '36px', color: getDayNameShort(d) === 'Dom' || getDayNameShort(d) === 'Sáb' ? '#ef4444' : '#cbd5e1', borderLeft: '1px solid #334155' }}>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{getDayNameShort(d)}</div>
+                      <th key={d} style={{ padding: '0.5rem 0.25rem', textAlign: 'center', minWidth: '36px', color: getDayNameShort(d) === 'Dom' || getDayNameShort(d) === 'Sáb' ? '#ef4444' : 'var(--text-primary)', borderLeft: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{getDayNameShort(d)}</div>
                         <div style={{ fontWeight: '700' }}>{d}</div>
                       </th>
                     ))}
@@ -428,17 +410,16 @@ export default function ProgramacionPage() {
                 <tbody>
                   {guardias.length === 0 ? (
                     <tr>
-                      <td colSpan={daysInMonth + 1} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={daysInMonth + 1} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                         No hay guardias o supervisores registrados.
                       </td>
                     </tr>
                   ) : (
                     guardias.map(g => (
-                      <tr key={g.id} style={{ borderBottom: '1px solid #334155' }}>
-                        {/* Nombre del Colaborador */}
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: '600', color: '#f8fafc', position: 'sticky', left: 0, backgroundColor: '#1e293b', zIndex: 5, borderRight: '1px solid #334155' }}>
+                      <tr key={g.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: '600', color: 'var(--text-primary)', position: 'sticky', left: 0, backgroundColor: 'var(--bg-card)', zIndex: 5, borderRight: '1px solid var(--border-color)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
                               {g.email.substring(0, 2).toUpperCase()}
                             </div>
                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
@@ -447,7 +428,6 @@ export default function ProgramacionPage() {
                           </div>
                         </td>
 
-                        {/* Días del mes */}
                         {daysArray.map(d => {
                           const dateStr = formatDateStr(d);
                           const turnosDelDia = turnos.filter(t => t.guardia_id === g.id && t.fecha === dateStr);
@@ -463,28 +443,28 @@ export default function ProgramacionPage() {
                               style={{ 
                                 padding: '0.375rem 0.125rem', 
                                 textAlign: 'center', 
-                                borderLeft: '1px solid #334155', 
+                                borderLeft: '1px solid var(--border-color)', 
                                 cursor: 'pointer',
                                 verticalAlign: 'top',
                                 height: '52px',
-                                transition: 'background-color 0.2s'
+                                transition: 'background-color 0.15s'
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(243, 244, 246, 0.8)'}
                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
                               {turnosDelDia.map(t => {
                                 const isExtra = t.descripcion?.includes('[EXTRA]');
                                 const isNight = t.hora_inicio >= '18:00' || t.hora_inicio === '19:00';
                                 
-                                let badgeColor = '#f59e0b'; // Diurno (Naranja)
+                                let badgeColor = '#f59e0b';
                                 let badgeText = 'TD';
 
                                 if (isNight) {
-                                  badgeColor = '#3b82f6'; // Nocturno (Azul)
+                                  badgeColor = '#3b82f6';
                                   badgeText = 'TN';
                                 }
                                 if (isExtra) {
-                                  badgeColor = '#ef4444'; // Extra (Rojo)
+                                  badgeColor = '#ef4444';
                                   badgeText = 'EX';
                                 }
 
@@ -504,7 +484,6 @@ export default function ProgramacionPage() {
                                       padding: '0.2rem 0.3rem',
                                       borderRadius: '0.25rem',
                                       marginBottom: '0.2rem',
-                                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                                       overflow: 'hidden',
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
@@ -526,12 +505,11 @@ export default function ProgramacionPage() {
             </div>
           )}
 
-          {/* VISTA 2: CALENDARIO MENSUAL */}
           {viewMode === 'calendar' && (
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '0.75rem', border: '1px solid #334155', padding: '1rem' }}>
+            <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '0.75rem', border: '1px solid var(--border-color)', padding: '1rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem' }}>
                 {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
-                  <div key={day} style={{ textAlign: 'center', padding: '0.5rem', fontWeight: '700', color: '#94a3b8', fontSize: '0.875rem' }}>
+                  <div key={day} style={{ textAlign: 'center', padding: '0.5rem', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                     {day}
                   </div>
                 ))}
@@ -544,9 +522,9 @@ export default function ProgramacionPage() {
                     <div
                       key={d}
                       style={{
-                        backgroundColor: '#0f172a',
+                        backgroundColor: 'var(--bg-body)',
                         borderRadius: '0.5rem',
-                        border: '1px solid #334155',
+                        border: '1px solid var(--border-color)',
                         minHeight: '100px',
                         padding: '0.5rem',
                         display: 'flex',
@@ -554,7 +532,7 @@ export default function ProgramacionPage() {
                         gap: '0.375rem'
                       }}
                     >
-                      <div style={{ fontWeight: '700', fontSize: '0.875rem', color: '#cbd5e1' }}>{d}</div>
+                      <div style={{ fontWeight: '700', fontSize: '0.875rem', color: 'var(--text-primary)' }}>{d}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', maxHeight: '80px' }}>
                         {turnosDelDia.map(t => (
                           <div
@@ -564,16 +542,17 @@ export default function ProgramacionPage() {
                               setShowDetailModal(true);
                             }}
                             style={{
-                              backgroundColor: '#334155',
+                              backgroundColor: 'var(--bg-card)',
                               padding: '0.25rem 0.375rem',
                               borderRadius: '0.25rem',
                               fontSize: '0.7rem',
                               cursor: 'pointer',
-                              borderLeft: '3px solid #3b82f6'
+                              borderLeft: '3px solid var(--primary)',
+                              border: '1px solid var(--border-color)'
                             }}
                           >
-                            <div style={{ fontWeight: '600', color: '#fff' }}>{t.guardia_email?.split('@')[0]}</div>
-                            <div style={{ color: '#94a3b8' }}>{t.hora_inicio} - {t.ubicacion}</div>
+                            <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{t.guardia_email?.split('@')[0]}</div>
+                            <div style={{ color: 'var(--text-secondary)' }}>{t.hora_inicio} - {t.ubicacion}</div>
                           </div>
                         ))}
                       </div>
@@ -586,22 +565,22 @@ export default function ProgramacionPage() {
         </>
       )}
 
-      {/* MODAL: CREAR TURNO INDIVIDUAL */}
+      {/* MODAL CREAR TURNO */}
       {showAddModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '450px', padding: '1.5rem', color: '#fff' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '450px', padding: '1.5rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Asignar Nuevo Turno</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleCreateTurno} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Guardia / Supervisor</label>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Guardia / Supervisor</label>
                 <select
                   value={guardiaId}
                   onChange={(e) => setGuardiaId(Number(e.target.value))}
-                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                   required
                 >
                   <option value={0}>-- Seleccionar Colaborador --</option>
@@ -612,84 +591,83 @@ export default function ProgramacionPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Fecha de Asignación</label>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Fecha de Asignación</label>
                 <input
                   type="date"
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                   required
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Hora Inicio</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Hora Inicio</label>
                   <input
                     type="time"
                     value={horaInicio}
                     onChange={(e) => setHoraInicio(e.target.value)}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                     required
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Hora Fin</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Hora Fin</label>
                   <input
                     type="time"
                     value={horaFin}
                     onChange={(e) => setHoraFin(e.target.value)}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Ubicación / Garita / Punto QR</label>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Ubicación / Garita / Punto QR</label>
                 <input
                   type="text"
                   placeholder="Ej. Garita Principal / Casa A29"
                   value={ubicacion}
                   onChange={(e) => setUbicacion(e.target.value)}
-                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                   required
                 />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" disabled={actionLoading} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>Guardar Turno</button>
+                <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" disabled={actionLoading} style={{ padding: '0.625rem 1.25rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>Guardar Turno</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL: PROGRAMADOR MASIVO */}
+      {/* MODAL PROGRAMACIÓN MASIVA */}
       {showMassiveModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '600px', padding: '1.75rem', color: '#fff' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '600px', padding: '1.75rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles style={{ color: '#f59e0b' }} size={22} />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Programación Masiva de Turnos</h3>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)' }}>Programación Masiva de Turnos</h3>
               </div>
-              <button onClick={() => setShowMassiveModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+              <button onClick={() => setShowMassiveModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <form onSubmit={handleMassiveCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Selección de Colaboradores */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.875rem', color: '#cbd5e1', fontWeight: '600' }}>
+                  <label style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: '600' }}>
                     Seleccionar Colaboradores ({selectedGuardiaIds.length} seleccionados)
                   </label>
-                  <button type="button" onClick={toggleSelectAllGuardias} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}>
+                  <button type="button" onClick={toggleSelectAllGuardias} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}>
                     {selectedGuardiaIds.length === guardias.length ? 'Desmarcar Todos' : 'Marcar Todos'}
                   </button>
                 </div>
-                <div style={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', maxHeight: '120px', overflowY: 'auto', padding: '0.5rem' }}>
+                <div style={{ backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', maxHeight: '120px', overflowY: 'auto', padding: '0.5rem' }}>
                   {guardias.map(g => (
                     <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem', cursor: 'pointer', fontSize: '0.8125rem' }}>
                       <input
@@ -703,38 +681,36 @@ export default function ProgramacionPage() {
                 </div>
               </div>
 
-              {/* Rangos de Fecha */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Desde (Fecha Inicio)</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Desde (Fecha Inicio)</label>
                   <input
                     type="date"
                     value={mDesde}
                     onChange={(e) => setMDesde(e.target.value)}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                     required
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Hasta (Fecha Fin)</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Hasta (Fecha Fin)</label>
                   <input
                     type="date"
                     value={mHasta}
                     onChange={(e) => setMHasta(e.target.value)}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                     required
                   />
                 </div>
               </div>
 
-              {/* Tipo de Turno y Ubicación */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Tipo de Turno</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Tipo de Turno</label>
                   <select
                     value={mTipoTurno}
                     onChange={(e) => setMTipoTurno(e.target.value)}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                   >
                     <option value="TD">TD - 12h Diurno (07:00 - 19:00)</option>
                     <option value="TN">TN - 12h Nocturno (19:00 - 07:00)</option>
@@ -742,20 +718,20 @@ export default function ProgramacionPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Ubicación / Punto QR</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Ubicación / Punto QR</label>
                   <input
                     type="text"
                     placeholder="Ej. Garita P1 / Terrazas"
                     value={mUbicacion}
                     onChange={(e) => setMUbicacion(e.target.value)}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                     required
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-                <button type="button" onClick={() => setShowMassiveModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
+                <button type="button" onClick={() => setShowMassiveModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
                 <button type="submit" disabled={actionLoading} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#f59e0b', color: '#000', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>
                   {actionLoading ? 'Procesando...' : 'Aplicar Programación Masiva'}
                 </button>
@@ -765,21 +741,21 @@ export default function ProgramacionPage() {
         </div>
       )}
 
-      {/* MODAL: DETALLE DE TURNO */}
+      {/* MODAL DETALLE DE TURNO */}
       {showDetailModal && selectedTurno && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '400px', padding: '1.5rem', color: '#fff' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '400px', padding: '1.5rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Detalle de Asignación</h3>
-              <button onClick={() => setShowDetailModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-primary)' }}>Detalle de Asignación</h3>
+              <button onClick={() => setShowDetailModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <div><strong style={{ color: '#94a3b8' }}>Colaborador:</strong> {selectedTurno.guardia_email}</div>
-              <div><strong style={{ color: '#94a3b8' }}>Fecha:</strong> {selectedTurno.fecha}</div>
-              <div><strong style={{ color: '#94a3b8' }}>Horario:</strong> {selectedTurno.hora_inicio} - {selectedTurno.hora_fin}</div>
-              <div><strong style={{ color: '#94a3b8' }}>Ubicación:</strong> {selectedTurno.ubicacion}</div>
-              <div><strong style={{ color: '#94a3b8' }}>Notas:</strong> {selectedTurno.descripcion || 'Sin notas'}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Colaborador:</strong> {selectedTurno.guardia_email}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Fecha:</strong> {selectedTurno.fecha}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Horario:</strong> {selectedTurno.hora_inicio} - {selectedTurno.hora_fin}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Ubicación:</strong> {selectedTurno.ubicacion}</div>
+              <div><strong style={{ color: 'var(--text-secondary)' }}>Notas:</strong> {selectedTurno.descripcion || 'Sin notas'}</div>
             </div>
 
             {(userRole === 'ADMIN' || userRole === 'SISADMIN') && (
