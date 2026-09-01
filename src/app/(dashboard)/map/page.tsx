@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Map as MapIcon, History, Crosshair, Users, Calendar, ShieldAlert } from 'lucide-react';
+import { Map as MapIcon, History, Crosshair, Users, Calendar, Clock, ShieldAlert } from 'lucide-react';
 import { trackingApi, usuariosApi, residencialApi, Ubicacion, HistorialUbicacion, Usuario } from '@/lib/api';
 import LiveMap from '@/components/map/LiveMap';
 
@@ -10,10 +10,13 @@ export default function OperativeMapPage() {
   const [guardiasLive, setGuardiasLive] = useState<Ubicacion[]>([]);
   const [guardiasDisponibles, setGuardiasDisponibles] = useState<Usuario[]>([]);
   
-  // Estados para historial
+  // Estados para historial (Fecha y Hora)
   const [guardiaSeleccionado, setGuardiaSeleccionado] = useState<string>('');
   const [fechaInicio, setFechaInicio] = useState<string>('');
+  const [horaInicio, setHoraInicio] = useState<string>('00:00');
   const [fechaFin, setFechaFin] = useState<string>('');
+  const [horaFin, setHoraFin] = useState<string>('23:59');
+  
   const [historial, setHistorial] = useState<HistorialUbicacion[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [residencialInfo, setResidencialInfo] = useState<{latitud: number, longitud: number, zoom: number} | null>(null);
@@ -73,13 +76,13 @@ export default function OperativeMapPage() {
 
   const buscarHistorial = async () => {
     if (guardiaSeleccionado === '' || !fechaInicio || !fechaFin) {
-      alert("Por favor selecciona un guardia (o 'Todos') y un rango de fechas.");
+      alert("Por favor selecciona un guardia (o 'Todos') y un rango de fechas y horas.");
       return;
     }
     setCargandoHistorial(true);
     try {
-      const fInicio = `${fechaInicio} 00:00:00`;
-      const fFin = `${fechaFin} 23:59:59`;
+      const fInicio = `${fechaInicio} ${horaInicio || '00:00'}:00`;
+      const fFin = `${fechaFin} ${horaFin || '23:59'}:59`;
       const data = await trackingApi.getHistorial(parseInt(guardiaSeleccionado), fInicio, fFin);
       setHistorial(data);
     } catch (err) {
@@ -96,10 +99,10 @@ export default function OperativeMapPage() {
         <div>
           <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <MapIcon color="#FACC15" />
-            Mapa Operativo
+            Mapa Operativo de Patrullaje
           </h1>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            Visualización en tiempo real e historial de rutas de guardias.
+            Visualización en tiempo real y trazado exacto de rutas históricas con marcas de hora.
           </p>
         </div>
         {modo === 'vivo' && (
@@ -112,7 +115,7 @@ export default function OperativeMapPage() {
 
       <div style={{ display: 'flex', flex: 1, gap: '1.5rem', minHeight: '600px' }}>
         {/* Panel lateral de controles */}
-        <div style={{ width: '320px', backgroundColor: 'var(--bg-card)', borderRadius: '1rem', padding: '1.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '340px', backgroundColor: 'var(--bg-card)', borderRadius: '1rem', padding: '1.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           
           <div style={{ display: 'flex', backgroundColor: '#1e293b', borderRadius: '0.5rem', padding: '0.25rem', marginBottom: '1.5rem' }}>
             <button
@@ -208,29 +211,53 @@ export default function OperativeMapPage() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#94a3b8', marginBottom: '0.25rem' }}>Fecha Inicio</label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar size={16} color="#64748b" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input
-                    type="date"
-                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', paddingLeft: '2.5rem', color: '#ffffff', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }}
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                  />
+              {/* Rango Inicio: Fecha y Hora */}
+              <div style={{ borderTop: '1px solid #334155', paddingTop: '0.75rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#FACC15', marginBottom: '0.5rem' }}>🚀 Inicio de Rango</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <Calendar size={14} color="#64748b" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="date"
+                      style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '0.4rem 0.5rem', paddingLeft: '1.8rem', color: '#ffffff', outline: 'none', colorScheme: 'dark', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      value={fechaInicio}
+                      onChange={(e) => setFechaInicio(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ width: '105px', position: 'relative' }}>
+                    <Clock size={14} color="#64748b" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="time"
+                      style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '0.4rem 0.5rem', paddingLeft: '1.8rem', color: '#ffffff', outline: 'none', colorScheme: 'dark', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      value={horaInicio}
+                      onChange={(e) => setHoraInicio(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#94a3b8', marginBottom: '0.25rem' }}>Fecha Fin</label>
-                <div style={{ position: 'relative' }}>
-                  <Calendar size={16} color="#64748b" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
-                  <input
-                    type="date"
-                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', paddingLeft: '2.5rem', color: '#ffffff', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }}
-                    value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
-                  />
+              {/* Rango Fin: Fecha y Hora */}
+              <div style={{ borderTop: '1px solid #334155', paddingTop: '0.75rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#EF4444', marginBottom: '0.5rem' }}>🏁 Fin de Rango</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ flex: 1, position: 'relative' }}>
+                    <Calendar size={14} color="#64748b" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="date"
+                      style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '0.4rem 0.5rem', paddingLeft: '1.8rem', color: '#ffffff', outline: 'none', colorScheme: 'dark', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      value={fechaFin}
+                      onChange={(e) => setFechaFin(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ width: '105px', position: 'relative' }}>
+                    <Clock size={14} color="#64748b" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                      type="time"
+                      style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '0.4rem 0.5rem', paddingLeft: '1.8rem', color: '#ffffff', outline: 'none', colorScheme: 'dark', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                      value={horaFin}
+                      onChange={(e) => setHoraFin(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -238,12 +265,12 @@ export default function OperativeMapPage() {
                 onClick={buscarHistorial}
                 disabled={cargandoHistorial}
                 style={{
-                  marginTop: '1rem',
+                  marginTop: '0.5rem',
                   width: '100%',
                   backgroundColor: '#FACC15',
                   color: '#0f172a',
                   fontWeight: 'bold',
-                  padding: '0.5rem 1rem',
+                  padding: '0.6rem 1rem',
                   borderRadius: '0.5rem',
                   border: 'none',
                   cursor: cargandoHistorial ? 'not-allowed' : 'pointer',
@@ -251,24 +278,32 @@ export default function OperativeMapPage() {
                   transition: 'background-color 0.2s'
                 }}
               >
-                {cargandoHistorial ? 'Buscando...' : 'Buscar Historial'}
+                {cargandoHistorial ? 'Trazando Ruta...' : '🔍 Buscar e Trazar Ruta'}
               </button>
 
               {historial.length > 0 && (
-                <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1e293b', borderRadius: '0.5rem', border: '1px solid #334155', fontSize: '0.875rem', color: '#ffffff' }}>
-                  <span style={{ color: '#FACC15', fontWeight: 'bold' }}>{historial.length}</span> puntos encontrados en la ruta.
+                <div style={{ marginTop: '0.5rem', padding: '0.75rem', backgroundColor: '#1e293b', borderRadius: '0.5rem', border: '1px solid #334155', fontSize: '0.85rem', color: '#ffffff' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <span>Puntos en la ruta:</span>
+                    <strong style={{ color: '#FACC15' }}>{historial.length}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                    🟢 Inicio: {new Date(historial[0].registrado_en).toLocaleTimeString()}<br />
+                    🔴 Fin: {new Date(historial[historial.length - 1].registrado_en).toLocaleTimeString()}
+                  </div>
                 </div>
               )}
             </div>
           )}
+
         </div>
 
-        {/* Mapa */}
-        <div style={{ flex: 1, backgroundColor: 'var(--bg-card)', borderRadius: '1rem', padding: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+        {/* Mapa central interactivo */}
+        <div style={{ flex: 1, borderRadius: '1rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
           <LiveMap 
             guardiasActivos={guardiasLive} 
             historial={historial} 
-            mostrarHistorial={modo === 'historial'} 
+            mostrarHistorial={modo === 'historial'}
             residencialInfo={residencialInfo}
           />
         </div>

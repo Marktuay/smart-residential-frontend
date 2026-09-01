@@ -1,6 +1,7 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Ubicacion, HistorialUbicacion } from '@/lib/api';
 import L from 'leaflet';
@@ -32,6 +33,32 @@ const createCustomGuardIcon = (nombre: string) => {
   });
 };
 
+const createWaypointIcon = (label: string, time: string, color: string) => {
+  return L.divIcon({
+    className: 'custom-waypoint-pin',
+    html: `
+      <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); z-index: 1000;">
+        <div style="background-color: #0F172A; color: #FFFFFF; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 8px; border: 1.5px solid ${color}; white-space: nowrap; box-shadow: 0 3px 8px rgba(0,0,0,0.4); margin-bottom: 2px;">
+          ${label} (${time})
+        </div>
+        <div style="width: 18px; height: 18px; background-color: ${color}; border: 2.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+};
+
+function MapController({ bounds }: { bounds: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds && bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [bounds, map]);
+  return null;
+}
+
 interface MapProps {
   guardiasActivos: Ubicacion[];
   historial: HistorialUbicacion[];
@@ -40,7 +67,6 @@ interface MapProps {
 }
 
 export default function MapContainerComponent({ guardiasActivos, historial, mostrarHistorial, residencialInfo }: MapProps) {
-  // Centro por defecto: Si viene del backend usar ese, sino Managua, Nicaragua
   const centroPorDefecto: [number, number] = residencialInfo ? [residencialInfo.latitud, residencialInfo.longitud] : [12.1364, -86.2514]; 
   const zoomInicial = residencialInfo ? residencialInfo.zoom : 13;
 
@@ -50,12 +76,24 @@ export default function MapContainerComponent({ guardiasActivos, historial, most
 
   const polylinePositions = historial.map(h => [h.latitud, h.longitud] as [number, number]);
 
+  const horaInicioStr = historial.length > 0 && historial[0].registrado_en
+    ? new Date(historial[0].registrado_en).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const horaFinStr = historial.length > 0 && historial[historial.length - 1].registrado_en
+    ? new Date(historial[historial.length - 1].registrado_en).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
+
   return (
     <MapContainer center={center} zoom={zoomInicial} style={{ height: '100%', width: '100%', zIndex: 0 }}>
       <TileLayer
         attribution='&copy; OpenStreetMap contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {mostrarHistorial && polylinePositions.length > 0 && (
+        <MapController bounds={polylinePositions} />
+      )}
 
       {!mostrarHistorial && guardiasActivos.map((guardia) => {
         const nombreGuardia = getNombreFromEmail(guardia.email, guardia.usuario_id);
@@ -85,12 +123,53 @@ export default function MapContainerComponent({ guardiasActivos, historial, most
 
       {mostrarHistorial && polylinePositions.length > 0 && (
         <>
-          <Polyline positions={polylinePositions} color="#FACC15" weight={5} />
-          <Marker position={polylinePositions[0]}>
-            <Popup><div style={{ color: '#000' }}>Inicio de ruta</div></Popup>
+          {/* Línea de patrullaje trazada en el mapa */}
+          <Polyline positions={polylinePositions} color="#2563EB" weight={6} opacity={0.8} />
+          <Polyline positions={polylinePositions} color="#FACC15" weight={3} dashArray="8, 8" />
+
+          {/* Marcadores individuales por punto con hora exacta al hacer clic */}
+          {historial.map((pt, idx) => (
+            <CircleMarker
+              key={idx}
+              center={[pt.latitud, pt.longitud]}
+              radius={4}
+              pathOptions={{ fillColor: '#3B82F6', color: '#FFFFFF', weight: 1.5, fillOpacity: 0.9 }}
+            >
+              <Popup>
+                <div style={{ color: '#0f172a', fontSize: '12px', padding: '2px' }}>
+                  <strong>📍 Punto #{idx + 1} de la ruta</strong><br />
+                  <strong>Hora:</strong> {new Date(pt.registrado_en).toLocaleTimeString()}<br />
+                  <strong>Fecha:</strong> {new Date(pt.registrado_en).toLocaleDateString()}<br />
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Lat: {pt.latitud.toFixed(5)}, Lng: {pt.longitud.toFixed(5)}</span>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))}
+
+          {/* Punto Inicio */}
+          <Marker 
+            position={polylinePositions[0]}
+            icon={createWaypointIcon('🚀 Inicio', horaInicioStr, '#10B981')}
+          >
+            <Popup>
+              <div style={{ color: '#0f172a' }}>
+                <strong style={{ color: '#10B981' }}>🚀 Punto Inicial de Patrullaje</strong><br />
+                <strong>Hora Inicio:</strong> {new Date(historial[0].registrado_en).toLocaleString()}
+              </div>
+            </Popup>
           </Marker>
-          <Marker position={polylinePositions[polylinePositions.length - 1]}>
-            <Popup><div style={{ color: '#000' }}>Fin de ruta</div></Popup>
+
+          {/* Punto Fin */}
+          <Marker 
+            position={polylinePositions[polylinePositions.length - 1]}
+            icon={createWaypointIcon('🏁 Fin', horaFinStr, '#EF4444')}
+          >
+            <Popup>
+              <div style={{ color: '#0f172a' }}>
+                <strong style={{ color: '#EF4444' }}>🏁 Último Punto Registrado</strong><br />
+                <strong>Hora Fin:</strong> {new Date(historial[historial.length - 1].registrado_en).toLocaleString()}
+              </div>
+            </Popup>
           </Marker>
         </>
       )}
