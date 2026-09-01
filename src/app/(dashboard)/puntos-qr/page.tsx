@@ -11,7 +11,10 @@ import {
   ShieldAlert,
   Home,
   User,
-  Building
+  Building,
+  Navigation,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { puntosQrApi, residencialApi, PuntoQR, Casa, ResidencialInfo } from '@/lib/api';
 
@@ -32,8 +35,8 @@ export default function PuntosQRPage() {
   
   const [formData, setFormData] = useState({
     nombre: '',
-    latitud: '',
-    longitud: '',
+    latitud: '12.1364',
+    longitud: '-86.2514',
     casa_id: ''
   });
 
@@ -100,289 +103,259 @@ export default function PuntosQRPage() {
         nombre: formData.nombre,
         latitud: formData.latitud ? parseFloat(formData.latitud) : undefined,
         longitud: formData.longitud ? parseFloat(formData.longitud) : undefined,
-        casa_id: formData.casa_id ? parseInt(formData.casa_id, 10) : null
+        casa_id: formData.casa_id ? parseInt(formData.casa_id) : null
       });
+
       setIsModalOpen(false);
       setFormData({
         nombre: '',
-        latitud: '',
-        longitud: '',
+        latitud: '12.1364',
+        longitud: '-86.2514',
         casa_id: ''
       });
-      fetchData(); // Refresh data
+      fetchData(selectedResidencialId);
     } catch (err) {
       console.error(err);
-      alert('Error al crear el punto QR.');
+      alert('Error al crear el Punto QR. Intente de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-secondary)' }}>
-        Cargando puntos de control...
-      </div>
-    );
-  }
+  // Simular captura interactiva de GPS del usuario
+  const handleCaptureCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setFormData({
+            ...formData,
+            latitud: pos.coords.latitude.toFixed(6),
+            longitud: pos.coords.longitude.toFixed(6)
+          });
+        },
+        () => {
+          alert('No se pudo obtener la ubicación GPS actual del dispositivo.');
+        }
+      );
+    }
+  };
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      
+      {/* Encabezado */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
             Puntos de Control QR
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            Gestiona los puntos físicos que los guardias deben escanear durante sus rondas.
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.375rem', fontSize: '0.875rem' }}>
+            Gestión de códigos QR georreferenciados para patrullaje y rondas de seguridad.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          {/* Selector de Residencial para SISADMIN */}
-          {userRole === 'SISADMIN' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Residencial:</span>
-              <select
-                value={selectedResidencialId}
-                onChange={(e) => handleResidencialChange(e.target.value)}
-                style={{
-                  padding: '0.5rem 2rem 0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-primary)',
-                  fontWeight: '600',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="">-- Seleccionar --</option>
-                {residenciales.map(r => (
-                  <option key={r.id} value={r.id}>{r.nombre}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            disabled={!selectedResidencialId}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '0.5rem', 
-              padding: '0.75rem 1.25rem', backgroundColor: 'var(--primary)', 
-              color: 'white', border: 'none', borderRadius: '0.5rem', 
-              fontWeight: '500', cursor: !selectedResidencialId ? 'not-allowed' : 'pointer',
-              opacity: !selectedResidencialId ? 0.5 : 1, transition: 'opacity 0.2s' 
-            }}
-          >
-            <Plus size={18} />
-            <span>Nuevo Punto QR</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            backgroundColor: 'var(--primary)',
+            color: '#ffffff',
+            border: 'none',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.625rem',
+            fontWeight: '700',
+            fontSize: '0.875rem',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+        >
+          <Plus size={18} />
+          Registrar Punto QR
+        </button>
       </div>
 
+      {/* Selector Multi-Tenant SISADMIN */}
+      {userRole === 'SISADMIN' && (
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '1rem 1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Building size={20} color="var(--primary)" />
+          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)' }}>Residencial Activo:</label>
+          <select
+            value={selectedResidencialId}
+            onChange={(e) => handleResidencialChange(e.target.value)}
+            style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+          >
+            {residenciales.map(r => (
+              <option key={r.id} value={r.id}>{r.nombre} ({r.id})</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {error && (
-        <div style={{ padding: '1rem', backgroundColor: 'var(--danger)', color: 'white', borderRadius: '0.5rem', marginBottom: '2rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.5rem', border: '1px solid #ef4444' }}>
           {error}
         </div>
       )}
 
-      {/* Grid de Puntos QR */}
-      {!selectedResidencialId ? (
-        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <Building size={48} style={{ margin: '0 auto 1rem', opacity: 0.2, color: '#FACC15' }} />
-          <p>Por favor seleccione un residencial activo en la parte superior para visualizar y gestionar sus puntos de control.</p>
-        </div>
-      ) : puntos.length === 0 ? (
-        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <QrCode size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
-          <p>No hay puntos QR registrados en este residencial. Agrega uno para empezar a diseñar rondas.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-          {puntos.map((punto) => (
-            <div key={punto.id} style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '0.5rem', backgroundColor: 'var(--bg-body)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MapPin size={20} style={{ color: 'var(--primary)' }} />
+      {/* Lista de Puntos QR */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+        {loading ? (
+          <p style={{ color: 'var(--text-secondary)' }}>Cargando Puntos QR...</p>
+        ) : puntos.length === 0 ? (
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '3rem', borderRadius: '1rem', textAlign: 'center', border: '1px solid var(--border-color)', gridColumn: '1 / -1' }}>
+            <QrCode size={48} color="var(--text-secondary)" style={{ margin: '0 auto 1rem' }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>No hay puntos QR registrados</h3>
+            <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Registra garitas o puntos de patrullaje independientes.</p>
+          </div>
+        ) : (
+          puntos.map(p => (
+            <div
+              key={p.id}
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: '1rem',
+                padding: '1.5rem',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--shadow-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '0.5rem', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <QrCode size={22} />
                   </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontWeight: '600', color: 'var(--text-primary)' }}>{punto.nombre}</h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID: #{punto.id}</span>
-                  </div>
+                  <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-secondary)', borderRadius: '0.25rem', border: '1px solid var(--border-color)', fontFamily: 'monospace' }}>
+                    {p.codigo_qr || 'QR-GENERADO'}
+                  </span>
                 </div>
-                {punto.casa_id && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.5rem',
-                    backgroundColor: punto.tiene_contrato_seguridad ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    border: `1px solid ${punto.tiene_contrato_seguridad ? '#22c55e' : '#ef4444'}`,
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    color: punto.tiene_contrato_seguridad ? '#22c55e' : '#ef4444',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>
-                    {punto.tiene_contrato_seguridad ? <ShieldCheck size={14} /> : <ShieldAlert size={14} />}
-                    <span>{punto.tiene_contrato_seguridad ? 'Contrato Activo' : 'Sin Contrato'}</span>
-                  </div>
-                )}
-              </div>
 
-              {/* Detalles de Casa y Residente (si está vinculado) */}
-              {punto.casa_id && (
-                <div style={{ 
-                  padding: '0.75rem', 
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)', 
-                  borderRadius: '0.5rem', 
-                  border: '1px solid var(--border-color)',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.35rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
-                    <Home size={14} style={{ color: '#FACC15' }} />
-                    <span>Casa Vinculada: <strong>{punto.numero_casa}</strong></span>
-                  </div>
-                  {punto.residente_nombre && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-                      <User size={14} />
-                      <span>Propietario: {punto.residente_nombre}</span>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{p.nombre}</h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  {p.numero_casa && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', color: '#d97706', fontWeight: '700' }}>
+                      <Home size={14} /> Casa Asignada: {p.numero_casa}
+                    </div>
+                  )}
+                  {p.latitud && p.longitud && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <MapPin size={14} /> {p.latitud}, {p.longitud}
                     </div>
                   )}
                 </div>
-              )}
-              
-              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-body)', borderRadius: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${punto.codigo_qr}`}
-                  alt="QR Code"
-                  style={{ width: '120px', height: '120px', backgroundColor: 'white', padding: '0.5rem', borderRadius: '0.25rem' }}
-                />
-                <code style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', wordBreak: 'break-all', textAlign: 'center' }}>
-                  {punto.codigo_qr}
-                </code>
               </div>
 
-              <button 
-                onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${punto.codigo_qr}`, '_blank')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem', width: '100%', backgroundColor: 'transparent', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.875rem' }}
+              <a
+                href={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(p.codigo_qr || p.nombre)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: '0.5rem',
+                  backgroundColor: 'var(--bg-body)',
+                  color: 'var(--primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.75rem',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.375rem'
+                }}
               >
-                <Download size={16} /> Descargar para imprimir
-              </button>
+                <Download size={14} /> Descargar Código QR
+              </a>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
-      {/* Modal Nuevo Punto */}
+      {/* MODAL REGISTRAR PUNTO QR CON MAP-PICKER */}
       {isModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '1rem',
-            width: '100%', maxWidth: '450px',
-            boxShadow: 'var(--shadow-card)',
-            overflow: 'hidden', border: '1px solid var(--border-color)'
-          }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Registrar Punto de Control</h2>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '550px', padding: '2rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <QrCode color="var(--primary)" size={24} />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Registrar Punto de Control QR</h3>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre del Punto</label>
-                <input 
-                  type="text" 
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>Nombre del Punto de Control *</label>
+                <input
+                  type="text"
                   required
+                  placeholder="Ej. Garita Principal / Área Social / Casa A29"
                   value={formData.nombre}
-                  onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  placeholder="Ej. Puerta Principal, Bodega B, Parque"
+                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                 />
               </div>
 
-              {/* Vincular a Casa (Dropdown) */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Vincular a Casa (Opcional)</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.375rem' }}>Vincular a Casa (Opcional)</label>
                 <select
                   value={formData.casa_id}
-                  onChange={(e) => setFormData({...formData, casa_id: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  onChange={(e) => setFormData({ ...formData, casa_id: e.target.value })}
+                  style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                 >
-                  <option value="">-- No vincular a una casa --</option>
+                  <option value="">-- Sin Vincular (Punto QR Independiente) --</option>
                   {casas.map(c => (
-                    <option key={c.id} value={c.id || ''}>
-                      Casa {c.numero_casa} - {c.bloque} {c.tiene_contrato_seguridad ? '🛡️ (Con Contrato)' : '❌ (Sin Contrato)'}
-                    </option>
+                    <option key={c.id} value={c.id}>Casa {c.numero_casa} ({c.bloque})</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Latitud (Opcional)</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={formData.latitud}
-                    onChange={(e) => setFormData({...formData, latitud: e.target.value})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                    placeholder="0.000000"
-                  />
+              {/* MAP PICKER SIMULADO / COORDENADAS GPS */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                  <label style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', fontWeight: '600' }}>Coordenadas GPS (Geolocalización)</label>
+                  <button
+                    type="button"
+                    onClick={handleCaptureCurrentLocation}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <Navigation size={12} /> Usar mi GPS Actual
+                  </button>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Longitud (Opcional)</label>
-                  <input 
-                    type="number" 
-                    step="any"
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Latitud (Ej. 12.1364)"
+                    value={formData.latitud}
+                    onChange={(e) => setFormData({ ...formData, latitud: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Longitud (Ej. -86.2514)"
                     value={formData.longitud}
-                    onChange={(e) => setFormData({...formData, longitud: e.target.value})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                    placeholder="0.000000"
+                    onChange={(e) => setFormData({ ...formData, longitud: e.target.value })}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem' }}
                   />
                 </div>
               </div>
-              <p style={{ marginTop: '-0.75rem', marginBottom: '1.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                * El código QR seguro será autogenerado por el servidor.
-              </p>
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button 
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit"
-                  disabled={isSubmitting}
-                  style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '500', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}
-                >
-                  {isSubmitting ? 'Creando...' : 'Crear Punto'}
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '0.75rem 1.25rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" disabled={isSubmitting} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>Crear Punto QR</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -167,7 +167,7 @@ export interface ResidencialInfo {
 	frecuencia_gps_seg?: number;
 	email_alerta_incidentes?: string;
 	telefono_emergencia?: string;
-	created_at: string;
+	created_at?: string;
 }
 
 export const residencialApi = {

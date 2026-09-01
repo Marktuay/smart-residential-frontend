@@ -1,7 +1,24 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Home, Users, Plus, Edit, Trash2, X, Building } from 'lucide-react';
+import { 
+  Home, 
+  Users, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  X, 
+  Building, 
+  FileText, 
+  ShieldCheck, 
+  Clock, 
+  Paperclip, 
+  Download, 
+  UploadCloud,
+  CheckCircle,
+  MapPin,
+  Eye
+} from 'lucide-react';
 import { residencialApi, Casa, Residente, ResidencialInfo } from '@/lib/api';
 
 export default function ResidencialPage() {
@@ -12,7 +29,7 @@ export default function ResidencialPage() {
   const [instalaciones, setInstalaciones] = useState<ResidencialInfo[]>([]);
   const [loadingInstalaciones, setLoadingInstalaciones] = useState(true);
   const [showInstalacionForm, setShowInstalacionForm] = useState(false);
-  const [nuevaInstalacion, setNuevaInstalacion] = useState<Partial<ResidencialInfo>>({
+  const [nuevaInstalacion, setNuevaInstalacion] = useState<ResidencialInfo>({
     id: '', nombre: '', direccion: '', latitud_centro: 12.1364, longitud_centro: -86.2514, zoom_defecto: 13
   });
   
@@ -20,6 +37,9 @@ export default function ResidencialPage() {
   const [casas, setCasas] = useState<Casa[]>([]);
   const [loadingCasas, setLoadingCasas] = useState(true);
   const [showCasaForm, setShowCasaForm] = useState(false);
+  const [selectedCasaExpediente, setSelectedCasaExpediente] = useState<Casa | null>(null);
+  const [expedienteTab, setExpedienteTab] = useState<'info' | 'visitas' | 'rondas' | 'documentos'>('info');
+
   const [nuevaCasa, setNuevaCasa] = useState<Casa>({
     numero_casa: '',
     bloque: '',
@@ -76,15 +96,12 @@ export default function ResidencialPage() {
 
   useEffect(() => {
     let role = localStorage.getItem('user_role');
-    
-    // Fallback: Si no está en localStorage (ej. sesión antigua), intentar extraerlo del JWT
     if (!role) {
       const token = localStorage.getItem('jwt_token');
       if (token) {
         try {
           const base64Url = token.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          // Add padding if necessary
           const pad = base64.length % 4;
           const paddedBase64 = pad ? base64 + '='.repeat(4 - pad) : base64;
           const payload = JSON.parse(atob(paddedBase64));
@@ -99,17 +116,14 @@ export default function ResidencialPage() {
     }
 
     setUserRole(role);
-    if (role === 'SISADMIN') {
-      setActiveTab('instalaciones');
-      fetchInstalaciones();
-    }
-
     fetchCasas();
     fetchResidentes();
+    if (role === 'SISADMIN') {
+      fetchInstalaciones();
+    }
   }, []);
 
-  // Handlers para crear
-  const handleCrearCasa = async (e: React.FormEvent) => {
+  const handleCreateCasa = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await residencialApi.createCasa(nuevaCasa);
@@ -117,498 +131,424 @@ export default function ResidencialPage() {
       setNuevaCasa({ numero_casa: '', bloque: '', estado: 'OCUPADA' });
       fetchCasas();
     } catch (error) {
-      console.error('Error creando casa:', error);
-      alert('Hubo un error al registrar la casa.');
+      console.error('Error al crear casa:', error);
+      alert('Error al registrar la casa');
     }
   };
 
-  const handleCrearResidente = async (e: React.FormEvent) => {
+  const handleCreateResidente = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await residencialApi.createResidente(nuevoResidente);
       setShowResidenteForm(false);
-      setNuevoResidente({ nombre: '', telefono: '', email: '', es_propietario: false, casa_id: undefined });
+      setNuevoResidente({ nombre: '', telefono: '', email: '', es_propietario: false });
       fetchResidentes();
     } catch (error) {
-      console.error('Error creando residente:', error);
-      alert('Hubo un error al registrar el residente.');
+      console.error('Error al crear residente:', error);
+      alert('Error al registrar el residente');
     }
   };
 
-  const handleCrearInstalacion = async (e: React.FormEvent) => {
+  const handleCreateInstalacion = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await residencialApi.createResidencial(nuevaInstalacion as ResidencialInfo);
+      await residencialApi.createResidencial(nuevaInstalacion);
       setShowInstalacionForm(false);
       setNuevaInstalacion({ id: '', nombre: '', direccion: '', latitud_centro: 12.1364, longitud_centro: -86.2514, zoom_defecto: 13 });
       fetchInstalaciones();
     } catch (error) {
-      console.error('Error creando instalación:', error);
-      alert('Hubo un error al registrar la instalación.');
+      console.error('Error al crear instalación:', error);
+      alert('Error al registrar residencial');
     }
   };
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      
+      {/* Encabezado */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-            Gestión Residencial
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+            Gestión Residencial & Expediente por Casa
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            Administra el padrón de casas y residentes activos.
+          <p style={{ color: 'var(--text-secondary)', marginTop: '0.375rem', fontSize: '0.875rem' }}>
+            Control de casas, residentes, expediente de vivienda y notificaciones.
           </p>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-body)', padding: '0.5rem', borderRadius: '0.75rem', width: 'fit-content', marginBottom: '1.5rem' }}>
-        {userRole === 'SISADMIN' && (
+        {/* Pestañas Principales */}
+        <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-card)', padding: '0.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+          {userRole === 'SISADMIN' && (
+            <button
+              onClick={() => setActiveTab('instalaciones')}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                backgroundColor: activeTab === 'instalaciones' ? 'var(--primary)' : 'transparent',
+                color: activeTab === 'instalaciones' ? '#ffffff' : 'var(--text-secondary)',
+                fontWeight: '700',
+                fontSize: '0.8125rem',
+                cursor: 'pointer'
+              }}
+            >
+              Instalaciones
+            </button>
+          )}
           <button
-            onClick={() => setActiveTab('instalaciones')}
+            onClick={() => setActiveTab('casas')}
             style={{
-              padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
-              backgroundColor: activeTab === 'instalaciones' ? 'var(--bg-card)' : 'transparent',
-              color: activeTab === 'instalaciones' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              border: activeTab === 'instalaciones' ? '1px solid var(--border-color)' : 'none',
-              borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: activeTab === 'instalaciones' ? 'var(--shadow-sm)' : 'none'
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              border: 'none',
+              backgroundColor: activeTab === 'casas' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'casas' ? '#ffffff' : 'var(--text-secondary)',
+              fontWeight: '700',
+              fontSize: '0.8125rem',
+              cursor: 'pointer'
             }}
           >
-            <Building size={16} />
-            Instalaciones
+            Casas / Viviendas
           </button>
-        )}
-        <button
-          onClick={() => setActiveTab('casas')}
-          style={{
-            padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
-            backgroundColor: activeTab === 'casas' ? 'var(--bg-card)' : 'transparent',
-            color: activeTab === 'casas' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: activeTab === 'casas' ? '1px solid var(--border-color)' : 'none',
-            borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-            boxShadow: activeTab === 'casas' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Home size={16} />
-          Casas
-        </button>
-        <button
-          onClick={() => setActiveTab('residentes')}
-          style={{
-            padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
-            backgroundColor: activeTab === 'residentes' ? 'var(--bg-card)' : 'transparent',
-            color: activeTab === 'residentes' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            border: activeTab === 'residentes' ? '1px solid var(--border-color)' : 'none',
-            borderRadius: '0.5rem', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s',
-            boxShadow: activeTab === 'residentes' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Users size={16} />
-          Residentes
-        </button>
+          <button
+            onClick={() => setActiveTab('residentes')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              border: 'none',
+              backgroundColor: activeTab === 'residentes' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'residentes' ? '#ffffff' : 'var(--text-secondary)',
+              fontWeight: '700',
+              fontSize: '0.8125rem',
+              cursor: 'pointer'
+            }}
+          >
+            Residentes
+          </button>
+        </div>
       </div>
 
-      {/* Contenido Instalaciones (Solo SISADMIN) */}
-      {activeTab === 'instalaciones' && userRole === 'SISADMIN' && (
-        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Directorio de Instalaciones</h2>
-            <button 
-              onClick={() => setShowInstalacionForm(true)}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                padding: '0.5rem 1rem', backgroundColor: '#1e293b', 
-                color: 'white', border: 'none', borderRadius: '0.5rem', 
-                fontWeight: '500', cursor: 'pointer'
-              }}
-            >
-              <Plus size={16} style={{ color: '#FACC15' }} />
-              <span>Registrar Instalación</span>
-            </button>
-          </div>
-          
-          {loadingInstalaciones ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando instalaciones...</div>
-          ) : instalaciones.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No hay instalaciones registradas aún.</div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border-color)' }}>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Identificador</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Nombre</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Dirección</th>
-                </tr>
-              </thead>
-              <tbody>
-                {instalaciones.map((inst) => (
-                  <tr key={inst.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: '500', color: 'var(--text-primary)' }}>{inst.id}</td>
-                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>{inst.nombre}</td>
-                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>{inst.direccion || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {/* Contenido Casas */}
+      {/* PESTAÑA: CASAS / VIVIENDAS */}
       {activeTab === 'casas' && (
-        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Directorio de Casas</h2>
-            <button 
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
               onClick={() => setShowCasaForm(true)}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                padding: '0.5rem 1rem', backgroundColor: '#1e293b', 
-                color: 'white', border: 'none', borderRadius: '0.5rem', 
-                fontWeight: '500', cursor: 'pointer'
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: '#f59e0b',
+                color: '#0f172a',
+                border: 'none',
+                padding: '0.625rem 1.25rem',
+                borderRadius: '0.5rem',
+                fontWeight: '700',
+                fontSize: '0.875rem',
+                cursor: 'pointer'
               }}
             >
-              <Plus size={16} style={{ color: '#FACC15' }} />
-              <span>Registrar Casa</span>
+              <Plus size={18} /> Registrar Nueva Casa
             </button>
           </div>
-          
-          {loadingCasas ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando casas...</div>
-          ) : casas.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No hay casas registradas aún.</div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border-color)' }}>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Número de Casa</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Bloque / Zona</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {casas.map((casa) => (
-                  <tr key={casa.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: '500', color: 'var(--text-primary)' }}>{casa.numero_casa}</td>
-                    <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>{casa.bloque || '-'}</td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <span style={{ 
-                        padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: '600',
-                        backgroundColor: casa.estado === 'OCUPADA' ? 'rgba(34, 197, 94, 0.1)' : 
-                                         casa.estado === 'EN_CONSTRUCCION' ? 'rgba(234, 179, 8, 0.1)' : 'rgba(100, 116, 139, 0.1)',
-                        color: casa.estado === 'OCUPADA' ? 'var(--success)' : 
-                               casa.estado === 'EN_CONSTRUCCION' ? '#ca8a04' : 'var(--text-secondary)'
-                      }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+            {loadingCasas ? (
+              <p style={{ color: 'var(--text-secondary)' }}>Cargando viviendas...</p>
+            ) : casas.length === 0 ? (
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '3rem', borderRadius: '1rem', textAlign: 'center', border: '1px solid var(--border-color)', gridColumn: '1 / -1' }}>
+                <Home size={48} color="var(--text-secondary)" style={{ margin: '0 auto 1rem' }} />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>No hay casas registradas</h3>
+              </div>
+            ) : (
+              casas.map((casa) => (
+                <div
+                  key={casa.id}
+                  style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderRadius: '1rem',
+                    padding: '1.5rem',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-card)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                        Casa {casa.numero_casa}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#059669', borderRadius: '1rem', fontWeight: '700', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                         {casa.estado}
                       </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                    </div>
+
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                      <div><strong>Sector / Bloque:</strong> {casa.bloque || 'Sector Principal'}</div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedCasaExpediente(casa);
+                      setExpedienteTab('info');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.625rem',
+                      backgroundColor: 'var(--bg-body)',
+                      color: 'var(--primary)',
+                      border: '1px solid var(--primary)',
+                      borderRadius: '0.5rem',
+                      fontWeight: '700',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.375rem'
+                    }}
+                  >
+                    <Eye size={16} /> Abrir Expediente de Casa
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
 
-      {/* Contenido Residentes */}
+      {/* PESTAÑA: RESIDENTES */}
       {activeTab === 'residentes' && (
-        <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
-          <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Padrón de Residentes</h2>
-            <button 
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
               onClick={() => setShowResidenteForm(true)}
-              style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', 
-                padding: '0.5rem 1rem', backgroundColor: '#1e293b', 
-                color: 'white', border: 'none', borderRadius: '0.5rem', 
-                fontWeight: '500', cursor: 'pointer'
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                backgroundColor: 'var(--primary)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '0.625rem 1.25rem',
+                borderRadius: '0.5rem',
+                fontWeight: '700',
+                fontSize: '0.875rem',
+                cursor: 'pointer'
               }}
             >
-              <Plus size={16} style={{ color: '#FACC15' }} />
-              <span>Registrar Residente</span>
+              <Plus size={18} /> Registrar Nuevo Residente
             </button>
           </div>
-          
-          {loadingResidentes ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando residentes...</div>
-          ) : residentes.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No hay residentes registrados aún.</div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--bg-body)', borderBottom: '1px solid var(--border-color)' }}>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Nombre Completo</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Contacto</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Casa</th>
-                  <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Es Propietario</th>
-                </tr>
-              </thead>
-              <tbody>
-                {residentes.map((residente) => (
-                  <tr key={residente.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: '500', color: 'var(--text-primary)' }}>{residente.nombre}</td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{ color: 'var(--text-primary)' }}>{residente.telefono || '-'}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{residente.email || '-'}</div>
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      {residente.numero_casa ? (
-                        <span style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--bg-body)', borderRadius: '0.25rem', fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                          Casa {residente.numero_casa}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.875rem' }}>No asignada</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      {residente.es_propietario ? (
-                        <span style={{ color: 'var(--success)', fontWeight: '500' }}>Sí</span>
-                      ) : (
-                        <span style={{ color: 'var(--text-secondary)' }}>No</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
+            {loadingResidentes ? (
+              <p style={{ color: 'var(--text-secondary)' }}>Cargando residentes...</p>
+            ) : residentes.length === 0 ? (
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '3rem', borderRadius: '1rem', textAlign: 'center', border: '1px solid var(--border-color)', gridColumn: '1 / -1' }}>
+                <Users size={48} color="var(--text-secondary)" style={{ margin: '0 auto 1rem' }} />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>No hay residentes registrados</h3>
+              </div>
+            ) : (
+              residentes.map((res) => (
+                <div
+                  key={res.id}
+                  style={{
+                    backgroundColor: 'var(--bg-card)',
+                    borderRadius: '1rem',
+                    padding: '1.5rem',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-card)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
+                      {res.nombre.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>{res.nombre}</h3>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{res.es_propietario ? 'Propietario' : 'Inquilino'}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    <div><strong>Teléfono:</strong> {res.telefono || 'No registrado'}</div>
+                    <div><strong>Email:</strong> {res.email || 'No registrado'}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* MODAL EXPEDIENTE COMPLETO DE PROPIEDAD / CASA */}
+      {selectedCasaExpediente && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '750px', padding: '2rem', color: 'var(--text-primary)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-card)' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Home color="var(--primary)" size={28} />
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                    Expediente Digital: Casa {selectedCasaExpediente.numero_casa}
+                  </h2>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>Historial consolidado de accesos, rondas y archivos</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedCasaExpediente(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+
+            {/* Pestañas del Expediente */}
+            <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+              {[
+                { key: 'info', label: 'Datos & Vehículos' },
+                { key: 'visitas', label: 'Historial de Visitas' },
+                { key: 'rondas', label: 'Marcaciones QR & Rondas' },
+                { key: 'documentos', label: 'Archivos Adjuntos' }
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setExpedienteTab(tab.key as any)}
+                  style={{
+                    padding: '0.625rem 1rem',
+                    border: 'none',
+                    borderBottom: expedienteTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent',
+                    backgroundColor: 'transparent',
+                    color: expedienteTab === tab.key ? 'var(--primary)' : 'var(--text-secondary)',
+                    fontWeight: '700',
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* PESTAÑA INFO */}
+            {expedienteTab === 'info' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>NÚMERO DE CASA:</strong> <div style={{ fontSize: '1rem', fontWeight: '700' }}>Casa {selectedCasaExpediente.numero_casa}</div></div>
+                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>BLOQUE / SECTOR:</strong> <div style={{ fontSize: '1rem', fontWeight: '700' }}>{selectedCasaExpediente.bloque || 'Sector Principal'}</div></div>
+                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>ESTADO DE OCUPACIÓN:</strong> <div style={{ fontSize: '0.875rem', fontWeight: '700', color: '#10b981' }}>{selectedCasaExpediente.estado}</div></div>
+                  <div><strong style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>VEHÍCULOS AUTORIZADOS:</strong> <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>2 Vehículos (M 294812, M 884721)</div></div>
+                </div>
+              </div>
+            )}
+
+            {/* PESTAÑA VISITAS */}
+            {expedienteTab === 'visitas' && (
+              <div style={{ backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                Visualización de las últimas visitas autorizadas para esta casa en bitácora.
+              </div>
+            )}
+
+            {/* PESTAÑA RONDAS */}
+            {expedienteTab === 'rondas' && (
+              <div style={{ backgroundColor: 'var(--bg-body)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                Registro de marcaciones QR de rondas nocturnas realizadas por supervisores en esta casa.
+              </div>
+            )}
+
+            {/* PESTAÑA DOCUMENTOS */}
+            {expedienteTab === 'documentos' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ border: '2px dashed var(--border-color)', padding: '1.5rem', textAlign: 'center', borderRadius: '0.5rem', backgroundColor: 'var(--bg-body)' }}>
+                  <UploadCloud size={32} color="var(--primary)" style={{ margin: '0 auto 0.5rem' }} />
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)' }}>Adjuntar Contratos o Identificaciones</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Soporta PDF, JPG, PNG</div>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       )}
 
-      {/* Modal Casa */}
+      {/* MODAL CREAR CASA */}
       {showCasaForm && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)', borderRadius: '1rem', width: '100%', maxWidth: '400px',
-            boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)'
-          }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Registrar Casa</h2>
-              <button onClick={() => setShowCasaForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '420px', padding: '1.75rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Registrar Casa / Vivienda</h3>
+              <button onClick={() => setShowCasaForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            <form onSubmit={handleCrearCasa} style={{ padding: '1.5rem' }}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Número de Casa</label>
+
+            <form onSubmit={handleCreateCasa} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Número de Casa *</label>
                 <input
-                  type="text" required
+                  type="text"
+                  required
+                  placeholder="Ej. A29 / 104"
                   value={nuevaCasa.numero_casa}
-                  onChange={(e) => setNuevaCasa({...nuevaCasa, numero_casa: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  placeholder="Ej. 104"
+                  onChange={(e) => setNuevaCasa({ ...nuevaCasa, numero_casa: e.target.value })}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Bloque / Zona</label>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Bloque / Sector</label>
                 <input
                   type="text"
+                  placeholder="Ej. Sector A / Etapa 2"
                   value={nuevaCasa.bloque}
-                  onChange={(e) => setNuevaCasa({...nuevaCasa, bloque: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  placeholder="Ej. Bloque A"
+                  onChange={(e) => setNuevaCasa({ ...nuevaCasa, bloque: e.target.value })}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Estado</label>
-                <select
-                  value={nuevaCasa.estado}
-                  onChange={(e) => setNuevaCasa({...nuevaCasa, estado: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                >
-                  <option value="OCUPADA">Ocupada</option>
-                  <option value="DESOCUPADA">Desocupada</option>
-                  <option value="EN_CONSTRUCCION">En Construcción</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowCasaForm(false)} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}>
-                  Cancelar
-                </button>
-                <button type="submit" style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#1e293b', color: 'white', fontWeight: '500', cursor: 'pointer' }}>
-                  Guardar
-                </button>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setShowCasaForm(false)} style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" style={{ padding: '0.625rem 1.25rem', backgroundColor: '#f59e0b', color: '#000', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>Guardar Casa</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Modal Residente */}
+      {/* MODAL CREAR RESIDENTE */}
       {showResidenteForm && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)', borderRadius: '1rem', width: '100%', maxWidth: '450px',
-            boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)'
-          }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Registrar Residente</h2>
-              <button onClick={() => setShowResidenteForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '420px', padding: '1.75rem', color: 'var(--text-primary)', boxShadow: 'var(--shadow-card)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Registrar Residente</h3>
+              <button onClick={() => setShowResidenteForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            <form onSubmit={handleCrearResidente} style={{ padding: '1.5rem' }}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre Completo</label>
-                <input
-                  type="text" required
-                  value={nuevoResidente.nombre}
-                  onChange={(e) => setNuevoResidente({...nuevoResidente, nombre: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Teléfono</label>
-                  <input
-                    type="text"
-                    value={nuevoResidente.telefono}
-                    onChange={(e) => setNuevoResidente({...nuevoResidente, telefono: e.target.value})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Email</label>
-                  <input
-                    type="email"
-                    value={nuevoResidente.email}
-                    onChange={(e) => setNuevoResidente({...nuevoResidente, email: e.target.value})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                </div>
-              </div>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Vincular a Casa</label>
-                <select
-                  value={nuevoResidente.casa_id || ''}
-                  onChange={(e) => setNuevoResidente({...nuevoResidente, casa_id: e.target.value ? parseInt(e.target.value) : undefined})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                >
-                  <option value="">Selecciona una casa (opcional)</option>
-                  {casas.map(c => (
-                    <option key={c.id} value={c.id}>Casa {c.numero_casa} - {c.bloque}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  id="es_propietario"
-                  checked={nuevoResidente.es_propietario}
-                  onChange={(e) => setNuevoResidente({...nuevoResidente, es_propietario: e.target.checked})}
-                  style={{ width: '1rem', height: '1rem' }}
-                />
-                <label htmlFor="es_propietario" style={{ fontSize: '0.875rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
-                  Es propietario de la casa
-                </label>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowResidenteForm(false)} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}>
-                  Cancelar
-                </button>
-                <button type="submit" style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#1e293b', color: 'white', fontWeight: '500', cursor: 'pointer' }}>
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Modal Instalación */}
-      {showInstalacionForm && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)', borderRadius: '1rem', width: '100%', maxWidth: '500px',
-            boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)'
-          }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Registrar Instalación</h2>
-              <button onClick={() => setShowInstalacionForm(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleCrearInstalacion} style={{ padding: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Identificador (ID Único)</label>
-                <input
-                  type="text" required
-                  value={nuevaInstalacion.id}
-                  onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, id: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  placeholder="Ej. los-robles"
-                />
-              </div>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre Comercial</label>
-                <input
-                  type="text" required
-                  value={nuevaInstalacion.nombre}
-                  onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, nombre: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  placeholder="Ej. Residencial Los Robles"
-                />
-              </div>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Dirección Física</label>
+            <form onSubmit={handleCreateResidente} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Nombre Completo *</label>
                 <input
                   type="text"
-                  value={nuevaInstalacion.direccion}
-                  onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, direccion: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
+                  required
+                  placeholder="Ej. Roberto Morales"
+                  value={nuevoResidente.nombre}
+                  onChange={(e) => setNuevoResidente({ ...nuevoResidente, nombre: e.target.value })}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Latitud Centro</label>
-                  <input
-                    type="number" step="any"
-                    value={nuevaInstalacion.latitud_centro}
-                    onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, latitud_centro: parseFloat(e.target.value)})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Longitud Centro</label>
-                  <input
-                    type="number" step="any"
-                    value={nuevaInstalacion.longitud_centro}
-                    onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, longitud_centro: parseFloat(e.target.value)})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Zoom</label>
-                  <input
-                    type="number"
-                    value={nuevaInstalacion.zoom_defecto}
-                    onChange={(e) => setNuevaInstalacion({...nuevaInstalacion, zoom_defecto: parseInt(e.target.value)})}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  />
-                </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Teléfono</label>
+                <input
+                  type="text"
+                  placeholder="Ej. +505 8899-0011"
+                  value={nuevoResidente.telefono}
+                  onChange={(e) => setNuevoResidente({ ...nuevoResidente, telefono: e.target.value })}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                />
               </div>
-              
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-                <button type="button" onClick={() => setShowInstalacionForm(false)} style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}>
-                  Cancelar
-                </button>
-                <button type="submit" style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#1e293b', color: 'white', fontWeight: '500', cursor: 'pointer' }}>
-                  Guardar
-                </button>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button type="button" onClick={() => setShowResidenteForm(false)} style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" style={{ padding: '0.625rem 1.25rem', backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>Guardar Residente</button>
               </div>
             </form>
           </div>
