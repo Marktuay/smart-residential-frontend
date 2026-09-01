@@ -15,26 +15,27 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
-  Info
+  Users,
+  Grid,
+  Filter,
+  Download,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { turnosApi, usuariosApi, Turno, Usuario } from '@/lib/api';
-
-// Paleta de Colores NCS365
-// Fondo Principal: #0f172a (Slate 900)
-// Fondo de Tarjetas: #1e293b (Slate 800) / Glassmorphism
-// Color Primario / Acento: #FACC15 (Yellow 400)
-// Texto Principal: #ffffff
-// Texto Secundario: #94a3b8 (Slate 400)
 
 export default function ProgramacionPage() {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [guardias, setGuardias] = useState<Usuario[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); // Agosto 2026 por defecto
   const [userRole, setUserRole] = useState<string>('');
+
+  // Vista activa: 'grid' (Matriz de Colaboradores) | 'calendar' (Mensual)
+  const [viewMode, setViewMode] = useState<'grid' | 'calendar'>('grid');
   
   // Modales
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showMassiveModal, setShowMassiveModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   
   // Selección
@@ -47,14 +48,23 @@ export default function ProgramacionPage() {
   const [error, setError] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
 
-  // Formulario Nuevo/Edición
+  // Formulario Individual
   const [guardiaId, setGuardiaId] = useState<number>(0);
   const [fecha, setFecha] = useState<string>('');
-  const [horaInicio, setHoraInicio] = useState<string>('08:00');
-  const [horaFin, setHoraFin] = useState<string>('18:00');
+  const [tipoTurno, setTipoTurno] = useState<string>('TD'); // TD (Diurno) | TN (Nocturno) | EXTRA
+  const [horaInicio, setHoraInicio] = useState<string>('07:00');
+  const [horaFin, setHoraFin] = useState<string>('19:00');
   const [ubicacion, setUbicacion] = useState<string>('');
   const [descripcion, setDescripcion] = useState<string>('');
-  const [estado, setEstado] = useState<string>('PROGRAMADO');
+
+  // Formulario Programador Masivo
+  const [selectedGuardiaIds, setSelectedGuardiaIds] = useState<number[]>([]);
+  const [mDesde, setMDesde] = useState<string>('');
+  const [mHasta, setMHasta] = useState<string>('');
+  const [mTipoTurno, setMTipoTurno] = useState<string>('TD');
+  const [mUbicacion, setMUbicacion] = useState<string>('');
+  const [mNotas, setMNotas] = useState<string>('');
+  const [mEsExtra, setMEsExtra] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -73,8 +83,7 @@ export default function ProgramacionPage() {
       ]);
       setTurnos(turnosData);
       
-      // Filtrar usuarios que son guardias o supervisores para asignación de turnos
-      const filteredGuardias = usuariosData.filter(u => u.rol === 'GUARDIA' || u.rol === 'SUPERVISOR');
+      const filteredGuardias = usuariosData.filter(u => u.rol === 'GUARDIA' || u.rol === 'SUPERVISOR' || u.rol === 'ADMIN');
       setGuardias(filteredGuardias);
     } catch (err: any) {
       console.error('Error al cargar datos de programación:', err);
@@ -94,754 +103,661 @@ export default function ProgramacionPage() {
     }
   };
 
-  const handleOpenAddModal = (dateStr: string) => {
-    if (userRole !== 'ADMIN' && userRole !== 'SISADMIN') return;
-    setSelectedDate(dateStr);
-    setFecha(dateStr);
-    setGuardiaId(guardias.length > 0 ? (guardias[0].id || 0) : 0);
-    setHoraInicio('08:00');
-    setHoraFin('18:00');
-    setUbicacion('');
-    setDescripcion('');
-    setEstado('PROGRAMADO');
-    setShowAddModal(true);
+  // Navegación de Fecha
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
-  const handleOpenEditModal = (e: React.MouseEvent, turno: Turno) => {
-    e.stopPropagation();
-    if (userRole !== 'ADMIN' && userRole !== 'SISADMIN') {
-      // Si es otro rol, solo ver detalles
-      handleOpenDetailModal(turno);
-      return;
-    }
-    setSelectedTurno(turno);
-    setGuardiaId(turno.guardia_id);
-    setFecha(turno.fecha);
-    setHoraInicio(turno.hora_inicio);
-    setHoraFin(turno.hora_fin);
-    setUbicacion(turno.ubicacion);
-    setDescripcion(turno.descripcion);
-    setEstado(turno.estado);
-    setShowEditModal(true);
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
-  const handleOpenDetailModal = (turno: Turno) => {
-    setSelectedTurno(turno);
-    setShowDetailModal(true);
+  const setMonthToday = () => {
+    setCurrentDate(new Date());
   };
 
+  // Obtener días del mes actual
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const getMonthName = (monthIndex: number) => {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return months[monthIndex];
+  };
+
+  const getDayNameShort = (dayNumber: number) => {
+    const d = new Date(year, month, dayNumber);
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    return dayNames[d.getDay()];
+  };
+
+  const formatDateStr = (d: number) => {
+    const m = (month + 1).toString().padStart(2, '0');
+    const dayStr = d.toString().padStart(2, '0');
+    return `${year}-${m}-${dayStr}`;
+  };
+
+  // Crear Turno Individual
   const handleCreateTurno = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (guardiaId === 0) {
-      showNotification('Seleccione un guardia válido.', 'error');
+    if (!guardiaId || !fecha || !ubicacion) {
+      showNotification('Por favor complete los campos requeridos', 'error');
+      return;
+    }
+
+    // Validar duplicidad
+    const exists = turnos.some(t => t.guardia_id === guardiaId && t.fecha === fecha && t.hora_inicio === horaInicio);
+    if (exists) {
+      showNotification('El colaborador ya tiene asignado un turno en esa fecha y horario.', 'error');
       return;
     }
 
     setActionLoading(true);
     try {
       const nuevoTurno: Turno = {
-        guardia_id: Number(guardiaId),
+        guardia_id: guardiaId,
         fecha,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
         ubicacion,
-        descripcion,
-        estado
+        descripcion: `${tipoTurno} - ${descripcion}`.trim(),
+        estado: 'PROGRAMADO'
       };
 
-      await turnosApi.createTurno(nuevoTurno);
+      const creado = await turnosApi.createTurno(nuevoTurno);
+      setTurnos([...turnos, creado]);
+      showNotification('Turno asignado con éxito', 'success');
       setShowAddModal(false);
-      showNotification('Turno programado exitosamente', 'success');
-      fetchData();
+      resetForm();
     } catch (err: any) {
-      console.error('Error al crear turno:', err);
-      showNotification('Error al programar el turno en el servidor.', 'error');
+      console.error(err);
+      showNotification('Error al crear el turno', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleUpdateTurno = async (e: React.FormEvent) => {
+  // Crear Programación Masiva
+  const handleMassiveCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTurno || !selectedTurno.id) return;
+    if (selectedGuardiaIds.length === 0) {
+      showNotification('Seleccione al menos un colaborador', 'error');
+      return;
+    }
+    if (!mDesde || !mHasta || !mUbicacion) {
+      showNotification('Complete las fechas y la ubicación de asignación', 'error');
+      return;
+    }
 
     setActionLoading(true);
     try {
-      const turnoActualizado: Turno = {
-        id: selectedTurno.id,
-        guardia_id: Number(guardiaId),
-        fecha,
-        hora_inicio: horaInicio,
-        hora_fin: horaFin,
-        ubicacion,
-        descripcion,
-        estado
-      };
+      const startDate = new Date(mDesde);
+      const endDate = new Date(mHasta);
+      const newTurnos: Turno[] = [];
 
-      await turnosApi.updateTurno(selectedTurno.id, turnoActualizado);
-      setShowEditModal(false);
-      showNotification('Turno actualizado correctamente', 'success');
-      fetchData();
+      let hInicio = '07:00';
+      let hFin = '19:00';
+      let tagTurno = 'TD 12h Diurno';
+
+      if (mTipoTurno === 'TN') {
+        hInicio = '19:00';
+        hFin = '07:00';
+        tagTurno = 'TN 12h Nocturno';
+      } else if (mTipoTurno === 'EXTRA') {
+        hInicio = '08:00';
+        hFin = '20:00';
+        tagTurno = 'TD Extra';
+      }
+
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+
+        for (const gId of selectedGuardiaIds) {
+          // Evitar duplicados
+          const exists = turnos.some(t => t.guardia_id === gId && t.fecha === dateStr && t.hora_inicio === hInicio);
+          if (!exists) {
+            const turno: Turno = {
+              guardia_id: gId,
+              fecha: dateStr,
+              hora_inicio: hInicio,
+              hora_fin: hFin,
+              ubicacion: mUbicacion,
+              descripcion: `${tagTurno} ${mEsExtra ? '[EXTRA]' : ''} - ${mNotas}`.trim(),
+              estado: 'PROGRAMADO'
+            };
+            const res = await turnosApi.createTurno(turno);
+            newTurnos.push(res);
+          }
+        }
+      }
+
+      setTurnos([...turnos, ...newTurnos]);
+      showNotification(`Se generaron ${newTurnos.length} turnos masivos con éxito`, 'success');
+      setShowMassiveModal(false);
+      resetMassiveForm();
     } catch (err: any) {
-      console.error('Error al actualizar turno:', err);
-      showNotification('Error al guardar cambios del turno.', 'error');
+      console.error(err);
+      showNotification('Error al aplicar programación masiva', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleDeleteTurno = async (id: number) => {
-    if (!window.confirm('¿Está seguro de que desea cancelar este turno?')) return;
-    
+  const handleDeleteTurno = async (id?: number) => {
+    if (!id) return;
+    if (!confirm('¿Está seguro de eliminar esta asignación de turno?')) return;
     setActionLoading(true);
     try {
       await turnosApi.deleteTurno(id);
-      setShowEditModal(false);
-      showNotification('Turno cancelado exitosamente', 'success');
-      fetchData();
+      setTurnos(turnos.filter(t => t.id !== id));
+      showNotification('Turno eliminado', 'success');
+      setShowDetailModal(false);
     } catch (err: any) {
-      console.error('Error al eliminar turno:', err);
-      showNotification('Error al cancelar el turno.', 'error');
+      showNotification('No se pudo eliminar el turno', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Lógica de Calendario
-  const prevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const resetForm = () => {
+    setGuardiaId(0);
+    setFecha('');
+    setTipoTurno('TD');
+    setHoraInicio('07:00');
+    setHoraFin('19:00');
+    setUbicacion('');
+    setDescripcion('');
   };
 
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const resetMassiveForm = () => {
+    setSelectedGuardiaIds([]);
+    setMDesde('');
+    setMHasta('');
+    setMTipoTurno('TD');
+    setMUbicacion('');
+    setMNotas('');
+    setMEsExtra(false);
   };
 
-  const getDaysInMonth = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    
-    const firstDay = new Date(year, month, 1);
-    const startDayOfWeek = firstDay.getDay(); // 0: Dom, 1: Lun, ...
-    
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    const prevMonthTotalDays = new Date(year, month, 0).getDate();
-    
-    const days = [];
-    
-    // Rellenar días del mes anterior
-    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-      const prevDate = new Date(year, month - 1, prevMonthTotalDays - i);
-      days.push({
-        date: prevDate,
-        isCurrentMonth: false,
-        dateString: formatDateString(prevDate)
-      });
-    }
-    
-    // Días del mes actual
-    for (let i = 1; i <= totalDays; i++) {
-      const currDate = new Date(year, month, i);
-      days.push({
-        date: currDate,
-        isCurrentMonth: true,
-        dateString: formatDateString(currDate)
-      });
-    }
-    
-    // Rellenar días del mes siguiente para completar un grid de 6 filas (42 días)
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      const nextDate = new Date(year, month + 1, i);
-      days.push({
-        date: nextDate,
-        isCurrentMonth: false,
-        dateString: formatDateString(nextDate)
-      });
-    }
-    
-    return days;
-  };
-
-  const formatDateString = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  const monthsSpanish = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
-  const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-  const getEstadoBadgeStyle = (est: string) => {
-    const base = {
-      fontSize: '0.7rem',
-      padding: '2px 6px',
-      borderRadius: '4px',
-      fontWeight: '600',
-      display: 'inline-block'
-    };
-    switch (est) {
-      case 'PROGRAMADO':
-        return { ...base, backgroundColor: 'rgba(250, 204, 21, 0.2)', color: '#FACC15' };
-      case 'EN_CURSO':
-        return { ...base, backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' };
-      case 'FINALIZADO':
-        return { ...base, backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10b981' };
-      case 'CANCELADO':
-        return { ...base, backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' };
-      default:
-        return base;
+  const toggleSelectAllGuardias = () => {
+    if (selectedGuardiaIds.length === guardias.length) {
+      setSelectedGuardiaIds([]);
+    } else {
+      setSelectedGuardiaIds(guardias.map(g => g.id!));
     }
   };
 
-  const isEditable = userRole === 'ADMIN' || userRole === 'SISADMIN';
+  const toggleGuardiaSelection = (id: number) => {
+    if (selectedGuardiaIds.includes(id)) {
+      setSelectedGuardiaIds(selectedGuardiaIds.filter(i => i !== id));
+    } else {
+      setSelectedGuardiaIds([...selectedGuardiaIds, id]);
+    }
+  };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-      padding: '2rem',
-      color: '#fff',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '2rem'
-    }}>
-      {/* Header Sección */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        paddingBottom: '1.5rem'
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: '#fff' }}>
+      
+      {/* Encabezado y Selector de Vista */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <CalendarIcon size={32} color="#FACC15" />
-            Programación de Turnos
-          </h1>
-          <p style={{ color: '#94a3b8', marginTop: '0.5rem', fontSize: '0.95rem' }}>
-            Planificación y asignación de turnos del personal de seguridad por residencial activo.
-          </p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>Gráfico de Turnos & Rol de Guardias</h1>
+          <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Visualiza y gestiona la programación del personal de seguridad</p>
         </div>
-        {isEditable && (
-          <button
-            onClick={() => handleOpenAddModal(formatDateString(new Date()))}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              backgroundColor: '#FACC15',
-              color: '#0f172a',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(250, 204, 21, 0.3)'
-            }}
-          >
-            <Plus size={18} />
-            Programar Turno
-          </button>
-        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Alternar Vista GRID vs Calendario */}
+          <div style={{ backgroundColor: '#1e293b', borderRadius: '0.5rem', padding: '0.25rem', display: 'flex', gap: '0.25rem', border: '1px solid #334155' }}>
+            <button
+              onClick={() => setViewMode('grid')}
+              style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                backgroundColor: viewMode === 'grid' ? '#3b82f6' : 'transparent',
+                color: '#fff',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
+              }}
+            >
+              <Grid size={16} /> Matriz GRID
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                backgroundColor: viewMode === 'calendar' ? '#3b82f6' : 'transparent',
+                color: '#fff',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
+              }}
+            >
+              <CalendarIcon size={16} /> Calendario
+            </button>
+          </div>
+
+          {(userRole === 'ADMIN' || userRole === 'SISADMIN') && (
+            <button
+              onClick={() => setShowMassiveModal(true)}
+              style={{
+                padding: '0.625rem 1rem',
+                backgroundColor: '#f59e0b',
+                color: '#000',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: '700',
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+              }}
+            >
+              <Sparkles size={16} /> Programador Masivo
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Alertas */}
       {error && (
-        <div style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          color: '#f87171',
-          padding: '1rem',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem'
-        }}>
-          <AlertCircle size={20} />
-          <span>{error}</span>
+        <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#fca5a5', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <AlertCircle size={18} /> {error}
         </div>
       )}
-
       {successMsg && (
-        <div style={{
-          backgroundColor: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          color: '#34d399',
-          padding: '1rem',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem'
-        }}>
-          <CheckCircle2 size={20} />
-          <span>{successMsg}</span>
+        <div style={{ padding: '1rem', backgroundColor: 'rgba(34, 197, 94, 0.2)', border: '1px solid #22c55e', color: '#86efac', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={18} /> {successMsg}
         </div>
       )}
 
-      {/* Controles del Mes */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        background: 'rgba(30, 41, 59, 0.5)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        padding: '1rem 1.5rem',
-        borderRadius: '12px'
-      }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, textTransform: 'capitalize' }}>
-          {monthsSpanish[currentDate.getMonth()]} {currentDate.getFullYear()}
-        </h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button 
-            onClick={prevMonth}
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.5rem',
-              cursor: 'pointer',
-              color: '#fff'
-            }}
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button 
-            onClick={() => setCurrentDate(new Date())}
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.5rem 1rem',
-              cursor: 'pointer',
-              color: '#fff',
-              fontSize: '0.875rem',
-              fontWeight: 600
-            }}
-          >
+      {/* Controles de Navegación de Mes */}
+      <div style={{ backgroundColor: '#1e293b', padding: '1rem', borderRadius: '0.75rem', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff', textTransform: 'capitalize' }}>
+            {getMonthName(month)} {year}
+          </h2>
+          <button onClick={setMonthToday} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.375rem', fontSize: '0.75rem', cursor: 'pointer' }}>
             Hoy
           </button>
-          <button 
-            onClick={nextMonth}
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.5rem',
-              cursor: 'pointer',
-              color: '#fff'
-            }}
-          >
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={prevMonth} style={{ padding: '0.5rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>
+            <ChevronLeft size={20} />
+          </button>
+          <button onClick={nextMonth} style={{ padding: '0.5rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>
             <ChevronRight size={20} />
           </button>
         </div>
       </div>
 
-      {/* Vista de Carga */}
       {loading ? (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '300px',
-          color: '#94a3b8'
-        }}>
-          <Clock size={36} className="animate-spin" style={{ marginRight: '1rem' }} />
-          <span>Cargando turnos programados del residencial...</span>
-        </div>
+        <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>Cargando matriz de turnos...</div>
       ) : (
-        /* Calendario Grid */
-        <div style={{
-          background: 'rgba(30, 41, 59, 0.3)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)'
-        }}>
-          {/* Cabecera Días de la Semana */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            background: 'rgba(15, 23, 42, 0.5)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-            textAlign: 'center',
-            padding: '0.75rem 0'
-          }}>
-            {daysOfWeek.map((day, idx) => (
-              <div key={idx} style={{
-                fontWeight: 700,
-                color: day === 'Dom' || day === 'Sáb' ? '#facc15' : '#94a3b8',
-                fontSize: '0.9rem'
-              }}>{day}</div>
-            ))}
-          </div>
-
-          {/* Celdas del Calendario */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            gridAutoRows: 'minmax(120px, 1fr)',
-            gap: '1px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)'
-          }}>
-            {getDaysInMonth().map((dayObj, idx) => {
-              const dayTurnos = turnos.filter(t => t.fecha === dayObj.dateString && t.estado !== 'CANCELADO');
-              const isToday = formatDateString(new Date()) === dayObj.dateString;
-              
-              return (
-                <div 
-                  key={idx}
-                  onClick={() => handleOpenAddModal(dayObj.dateString)}
-                  style={{
-                    backgroundColor: dayObj.isCurrentMonth ? '#1e293b' : '#0f172a',
-                    padding: '0.5rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                    cursor: isEditable ? 'pointer' : 'default',
-                    position: 'relative',
-                    transition: 'all 0.15s',
-                    opacity: dayObj.isCurrentMonth ? 1 : 0.4
-                  }}
-                  onMouseEnter={(e) => {
-                    if (isEditable) e.currentTarget.style.backgroundColor = 'rgba(250, 204, 21, 0.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = dayObj.isCurrentMonth ? '#1e293b' : '#0f172a';
-                  }}
-                >
-                  {/* Número de Día */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{
-                      fontWeight: isToday ? '800' : '500',
-                      fontSize: '0.9rem',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: isToday ? '#FACC15' : 'transparent',
-                      color: isToday ? '#0f172a' : '#fff'
-                    }}>
-                      {dayObj.date.getDate()}
-                    </span>
-                    {dayTurnos.length > 0 && (
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                        {dayTurnos.length} turno{dayTurnos.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Listado de Turnos del Día */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.35rem',
-                    overflowY: 'auto',
-                    flex: 1,
-                    maxHeight: '110px'
-                  }}>
-                    {dayTurnos.map((t) => (
-                      <div
-                        key={t.id}
-                        onClick={(e) => handleOpenEditModal(e, t)}
-                        style={{
-                          background: 'rgba(15, 23, 42, 0.6)',
-                          borderLeft: '3px solid #FACC15',
-                          borderRadius: '4px',
-                          padding: '4px 6px',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '2px',
-                          transition: 'transform 0.1s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
-                      >
-                        <div style={{ fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {t.guardia_email ? t.guardia_email.split('@')[0] : `Guardia ID: ${t.guardia_id}`}
-                        </div>
-                        <div style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <Clock size={10} />
-                          {t.hora_inicio} - {t.hora_fin}
-                        </div>
-                        {t.ubicacion && (
-                          <div style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '2px', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            <MapPin size={10} />
-                            {t.ubicacion}
-                          </div>
-                        )}
-                      </div>
+        <>
+          {/* VISTA 1: MATRIZ GRID POR COLABORADOR */}
+          {viewMode === 'grid' && (
+            <div style={{ backgroundColor: '#1e293b', borderRadius: '0.75rem', border: '1px solid #334155', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#0f172a', borderBottom: '1px solid #334155' }}>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', minWidth: '180px', color: '#94a3b8', fontWeight: '600', position: 'sticky', left: 0, backgroundColor: '#0f172a', zIndex: 10 }}>
+                      Colaborador
+                    </th>
+                    {daysArray.map(d => (
+                      <th key={d} style={{ padding: '0.5rem 0.25rem', textAlign: 'center', minWidth: '36px', color: getDayNameShort(d) === 'Dom' || getDayNameShort(d) === 'Sáb' ? '#ef4444' : '#cbd5e1', borderLeft: '1px solid #334155' }}>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{getDayNameShort(d)}</div>
+                        <div style={{ fontWeight: '700' }}>{d}</div>
+                      </th>
                     ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {guardias.length === 0 ? (
+                    <tr>
+                      <td colSpan={daysInMonth + 1} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                        No hay guardias o supervisores registrados.
+                      </td>
+                    </tr>
+                  ) : (
+                    guardias.map(g => (
+                      <tr key={g.id} style={{ borderBottom: '1px solid #334155' }}>
+                        {/* Nombre del Colaborador */}
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: '600', color: '#f8fafc', position: 'sticky', left: 0, backgroundColor: '#1e293b', zIndex: 5, borderRight: '1px solid #334155' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
+                              {g.email.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                              {g.email.split('@')[0]}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Días del mes */}
+                        {daysArray.map(d => {
+                          const dateStr = formatDateStr(d);
+                          const turnosDelDia = turnos.filter(t => t.guardia_id === g.id && t.fecha === dateStr);
+
+                          return (
+                            <td 
+                              key={d} 
+                              onClick={() => {
+                                setGuardiaId(g.id!);
+                                setFecha(dateStr);
+                                setShowAddModal(true);
+                              }}
+                              style={{ 
+                                padding: '0.375rem 0.125rem', 
+                                textAlign: 'center', 
+                                borderLeft: '1px solid #334155', 
+                                cursor: 'pointer',
+                                verticalAlign: 'top',
+                                height: '52px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#334155'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              {turnosDelDia.map(t => {
+                                const isExtra = t.descripcion?.includes('[EXTRA]');
+                                const isNight = t.hora_inicio >= '18:00' || t.hora_inicio === '19:00';
+                                
+                                let badgeColor = '#f59e0b'; // Diurno (Naranja)
+                                let badgeText = 'TD';
+
+                                if (isNight) {
+                                  badgeColor = '#3b82f6'; // Nocturno (Azul)
+                                  badgeText = 'TN';
+                                }
+                                if (isExtra) {
+                                  badgeColor = '#ef4444'; // Extra (Rojo)
+                                  badgeText = 'EX';
+                                }
+
+                                return (
+                                  <div
+                                    key={t.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedTurno(t);
+                                      setShowDetailModal(true);
+                                    }}
+                                    style={{
+                                      backgroundColor: badgeColor,
+                                      color: '#fff',
+                                      fontSize: '0.65rem',
+                                      fontWeight: '800',
+                                      padding: '0.2rem 0.3rem',
+                                      borderRadius: '0.25rem',
+                                      marginBottom: '0.2rem',
+                                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    title={`${t.ubicacion} (${t.hora_inicio} - ${t.hora_fin})`}
+                                  >
+                                    {badgeText}
+                                  </div>
+                                );
+                              })}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* VISTA 2: CALENDARIO MENSUAL */}
+          {viewMode === 'calendar' && (
+            <div style={{ backgroundColor: '#1e293b', borderRadius: '0.75rem', border: '1px solid #334155', padding: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem' }}>
+                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
+                  <div key={day} style={{ textAlign: 'center', padding: '0.5rem', fontWeight: '700', color: '#94a3b8', fontSize: '0.875rem' }}>
+                    {day}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                ))}
+
+                {daysArray.map(d => {
+                  const dateStr = formatDateStr(d);
+                  const turnosDelDia = turnos.filter(t => t.fecha === dateStr);
+
+                  return (
+                    <div
+                      key={d}
+                      style={{
+                        backgroundColor: '#0f172a',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #334155',
+                        minHeight: '100px',
+                        padding: '0.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.375rem'
+                      }}
+                    >
+                      <div style={{ fontWeight: '700', fontSize: '0.875rem', color: '#cbd5e1' }}>{d}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', maxHeight: '80px' }}>
+                        {turnosDelDia.map(t => (
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              setSelectedTurno(t);
+                              setShowDetailModal(true);
+                            }}
+                            style={{
+                              backgroundColor: '#334155',
+                              padding: '0.25rem 0.375rem',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.7rem',
+                              cursor: 'pointer',
+                              borderLeft: '3px solid #3b82f6'
+                            }}
+                          >
+                            <div style={{ fontWeight: '600', color: '#fff' }}>{t.guardia_email?.split('@')[0]}</div>
+                            <div style={{ color: '#94a3b8' }}>{t.hora_inicio} - {t.ubicacion}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* ================= MODAL AGREGAR TURNO ================= */}
+      {/* MODAL: CREAR TURNO INDIVIDUAL */}
       {showAddModal && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <div style={modalHeaderStyle}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Plus color="#FACC15" />
-                Programar Nuevo Turno
-              </h3>
-              <button onClick={() => setShowAddModal(false)} style={closeBtnStyle}><X size={20} /></button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '450px', padding: '1.5rem', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Asignar Nuevo Turno</h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            
-            <form onSubmit={handleCreateTurno} style={formStyle}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelStyle}>Fecha</label>
-                  <input 
-                    type="date" 
-                    required 
-                    value={fecha} 
-                    onChange={(e) => setFecha(e.target.value)} 
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Guardia de Seguridad</label>
-                  <select 
-                    required 
-                    value={guardiaId} 
-                    onChange={(e) => setGuardiaId(Number(e.target.value))} 
-                    style={inputStyle}
-                  >
-                    <option value="">Seleccione Guardia...</option>
-                    {guardias.map(g => (
-                      <option key={g.id} value={g.id}>{g.email} ({g.rol})</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelStyle}>Hora Entrada</label>
-                  <input 
-                    type="time" 
-                    required 
-                    value={horaInicio} 
-                    onChange={(e) => setHoraInicio(e.target.value)} 
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Hora Salida</label>
-                  <input 
-                    type="time" 
-                    required 
-                    value={horaFin} 
-                    onChange={(e) => setHoraFin(e.target.value)} 
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
+            <form onSubmit={handleCreateTurno} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={labelStyle}>Ubicación / Sector / Puesto</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej. Puerta Principal, Sector Norte, Garita 1" 
-                  value={ubicacion} 
-                  onChange={(e) => setUbicacion(e.target.value)} 
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Instrucciones / Detalles</label>
-                <textarea 
-                  rows={3} 
-                  placeholder="Detalles sobre las tareas a realizar durante el turno..." 
-                  value={descripcion} 
-                  onChange={(e) => setDescripcion(e.target.value)} 
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Estado Inicial</label>
-                <select value={estado} onChange={(e) => setEstado(e.target.value)} style={inputStyle}>
-                  <option value="PROGRAMADO">PROGRAMADO</option>
-                  <option value="EN_CURSO">EN CURSO</option>
-                  <option value="FINALIZADO">FINALIZADO</option>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Guardia / Supervisor</label>
+                <select
+                  value={guardiaId}
+                  onChange={(e) => setGuardiaId(Number(e.target.value))}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  required
+                >
+                  <option value={0}>-- Seleccionar Colaborador --</option>
+                  {guardias.map(g => (
+                    <option key={g.id} value={g.id}>{g.email} ({g.rol})</option>
+                  ))}
                 </select>
               </div>
 
-              <div style={modalFooterStyle}>
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddModal(false)} 
-                  style={cancelBtnStyle}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={actionLoading}
-                  style={submitBtnStyle}
-                >
-                  {actionLoading ? 'Programando...' : 'Programar Turno'}
-                </button>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Fecha de Asignación</label>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Hora Inicio</label>
+                  <input
+                    type="time"
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Hora Fin</label>
+                  <input
+                    type="time"
+                    value={horaFin}
+                    onChange={(e) => setHoraFin(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Ubicación / Garita / Punto QR</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Garita Principal / Casa A29"
+                  value={ubicacion}
+                  onChange={(e) => setUbicacion(e.target.value)}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" disabled={actionLoading} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer' }}>Guardar Turno</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ================= MODAL EDITAR TURNO ================= */}
-      {showEditModal && selectedTurno && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <div style={modalHeaderStyle}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Edit color="#FACC15" />
-                Editar Turno Programado
-              </h3>
-              <button onClick={() => setShowEditModal(false)} style={closeBtnStyle}><X size={20} /></button>
+      {/* MODAL: PROGRAMADOR MASIVO */}
+      {showMassiveModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '600px', padding: '1.75rem', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles style={{ color: '#f59e0b' }} size={22} />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Programación Masiva de Turnos</h3>
+              </div>
+              <button onClick={() => setShowMassiveModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
             </div>
-            
-            <form onSubmit={handleUpdateTurno} style={formStyle}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelStyle}>Fecha</label>
-                  <input 
-                    type="date" 
-                    required 
-                    value={fecha} 
-                    onChange={(e) => setFecha(e.target.value)} 
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Guardia de Seguridad</label>
-                  <select 
-                    required 
-                    value={guardiaId} 
-                    onChange={(e) => setGuardiaId(Number(e.target.value))} 
-                    style={inputStyle}
-                  >
-                    <option value="">Seleccione Guardia...</option>
-                    {guardias.map(g => (
-                      <option key={g.id} value={g.id}>{g.email} ({g.rol})</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelStyle}>Hora Entrada</label>
-                  <input 
-                    type="time" 
-                    required 
-                    value={horaInicio} 
-                    onChange={(e) => setHoraInicio(e.target.value)} 
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Hora Salida</label>
-                  <input 
-                    type="time" 
-                    required 
-                    value={horaFin} 
-                    onChange={(e) => setHoraFin(e.target.value)} 
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
+            <form onSubmit={handleMassiveCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Selección de Colaboradores */}
               <div>
-                <label style={labelStyle}>Ubicación / Sector / Puesto</label>
-                <input 
-                  type="text" 
-                  value={ubicacion} 
-                  onChange={(e) => setUbicacion(e.target.value)} 
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Instrucciones / Detalles</label>
-                <textarea 
-                  rows={3} 
-                  value={descripcion} 
-                  onChange={(e) => setDescripcion(e.target.value)} 
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={labelStyle}>Estado</label>
-                  <select value={estado} onChange={(e) => setEstado(e.target.value)} style={inputStyle}>
-                    <option value="PROGRAMADO">PROGRAMADO</option>
-                    <option value="EN_CURSO">EN CURSO</option>
-                    <option value="FINALIZADO">FINALIZADO</option>
-                    <option value="CANCELADO">CANCELADO</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => selectedTurno.id && handleDeleteTurno(selectedTurno.id)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      color: '#ef4444',
-                      padding: '0.75rem',
-                      borderRadius: '8px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <Trash2 size={18} />
-                    Cancelar Turno
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.875rem', color: '#cbd5e1', fontWeight: '600' }}>
+                    Seleccionar Colaboradores ({selectedGuardiaIds.length} seleccionados)
+                  </label>
+                  <button type="button" onClick={toggleSelectAllGuardias} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}>
+                    {selectedGuardiaIds.length === guardias.length ? 'Desmarcar Todos' : 'Marcar Todos'}
                   </button>
                 </div>
+                <div style={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', maxHeight: '120px', overflowY: 'auto', padding: '0.5rem' }}>
+                  {guardias.map(g => (
+                    <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem', cursor: 'pointer', fontSize: '0.8125rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedGuardiaIds.includes(g.id!)}
+                        onChange={() => toggleGuardiaSelection(g.id!)}
+                      />
+                      {g.email} ({g.rol})
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <div style={modalFooterStyle}>
-                <button 
-                  type="button" 
-                  onClick={() => setShowEditModal(false)} 
-                  style={cancelBtnStyle}
-                >
-                  Cerrar
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={actionLoading}
-                  style={submitBtnStyle}
-                >
-                  {actionLoading ? 'Guardando...' : 'Guardar Cambios'}
+              {/* Rangos de Fecha */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Desde (Fecha Inicio)</label>
+                  <input
+                    type="date"
+                    value={mDesde}
+                    onChange={(e) => setMDesde(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Hasta (Fecha Fin)</label>
+                  <input
+                    type="date"
+                    value={mHasta}
+                    onChange={(e) => setMHasta(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Tipo de Turno y Ubicación */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Tipo de Turno</label>
+                  <select
+                    value={mTipoTurno}
+                    onChange={(e) => setMTipoTurno(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                  >
+                    <option value="TD">TD - 12h Diurno (07:00 - 19:00)</option>
+                    <option value="TN">TN - 12h Nocturno (19:00 - 07:00)</option>
+                    <option value="EXTRA">TD Extra (08:00 - 20:00)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '0.375rem' }}>Ubicación / Punto QR</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Garita P1 / Terrazas"
+                    value={mUbicacion}
+                    onChange={(e) => setMUbicacion(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '0.5rem', color: '#fff' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="button" onClick={() => setShowMassiveModal(false)} style={{ padding: '0.625rem 1rem', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" disabled={actionLoading} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#f59e0b', color: '#000', border: 'none', borderRadius: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>
+                  {actionLoading ? 'Procesando...' : 'Aplicar Programación Masiva'}
                 </button>
               </div>
             </form>
@@ -849,202 +765,38 @@ export default function ProgramacionPage() {
         </div>
       )}
 
-      {/* ================= MODAL DETALLE TURNO (VISTA LECTURA) ================= */}
+      {/* MODAL: DETALLE DE TURNO */}
       {showDetailModal && selectedTurno && (
-        <div style={modalOverlayStyle}>
-          <div style={{ ...modalContentStyle, maxWidth: '500px' }}>
-            <div style={modalHeaderStyle}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Info color="#FACC15" />
-                Detalle del Turno
-              </h3>
-              <button onClick={() => setShowDetailModal(false)} style={closeBtnStyle}><X size={20} /></button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1rem 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={getEstadoBadgeStyle(selectedTurno.estado)}>
-                  {selectedTurno.estado}
-                </span>
-                <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>
-                  {selectedTurno.fecha}
-                </span>
-              </div>
-
-              <div style={detailItemStyle}>
-                <User size={18} color="#FACC15" />
-                <div>
-                  <div style={detailLabelStyle}>Guardia asignado</div>
-                  <div style={detailValueStyle}>{selectedTurno.guardia_email || `ID: ${selectedTurno.guardia_id}`}</div>
-                </div>
-              </div>
-
-              <div style={detailItemStyle}>
-                <Clock size={18} color="#FACC15" />
-                <div>
-                  <div style={detailLabelStyle}>Horario</div>
-                  <div style={detailValueStyle}>{selectedTurno.hora_inicio} - {selectedTurno.hora_fin}</div>
-                </div>
-              </div>
-
-              {selectedTurno.ubicacion && (
-                <div style={detailItemStyle}>
-                  <MapPin size={18} color="#FACC15" />
-                  <div>
-                    <div style={detailLabelStyle}>Puesto / Ubicación</div>
-                    <div style={detailValueStyle}>{selectedTurno.ubicacion}</div>
-                  </div>
-                </div>
-              )}
-
-              {selectedTurno.descripcion && (
-                <div style={detailItemStyle}>
-                  <FileText size={18} color="#FACC15" />
-                  <div>
-                    <div style={detailLabelStyle}>Detalles / Instrucciones</div>
-                    <div style={{ ...detailValueStyle, whiteSpace: 'pre-wrap', lineHeight: '1.4' }}>
-                      {selectedTurno.descripcion}
-                    </div>
-                  </div>
-                </div>
-              )}
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '1rem', width: '100%', maxWidth: '400px', padding: '1.5rem', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '700' }}>Detalle de Asignación</h3>
+              <button onClick={() => setShowDetailModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
-            <div style={{ ...modalFooterStyle, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '1rem' }}>
-              <button 
-                onClick={() => setShowDetailModal(false)} 
-                style={{ ...cancelBtnStyle, width: '100%' }}
-              >
-                Cerrar
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
+              <div><strong style={{ color: '#94a3b8' }}>Colaborador:</strong> {selectedTurno.guardia_email}</div>
+              <div><strong style={{ color: '#94a3b8' }}>Fecha:</strong> {selectedTurno.fecha}</div>
+              <div><strong style={{ color: '#94a3b8' }}>Horario:</strong> {selectedTurno.hora_inicio} - {selectedTurno.hora_fin}</div>
+              <div><strong style={{ color: '#94a3b8' }}>Ubicación:</strong> {selectedTurno.ubicacion}</div>
+              <div><strong style={{ color: '#94a3b8' }}>Notas:</strong> {selectedTurno.descripcion || 'Sin notas'}</div>
             </div>
+
+            {(userRole === 'ADMIN' || userRole === 'SISADMIN') && (
+              <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => handleDeleteTurno(selectedTurno.id)}
+                  disabled={actionLoading}
+                  style={{ padding: '0.5rem 1rem', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Trash2 size={16} /> Eliminar Asignación
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
+
     </div>
   );
 }
-
-// Estilos Modales & Formularios
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(15, 23, 42, 0.85)',
-  backdropFilter: 'blur(8px)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-  padding: '1rem'
-};
-
-const modalContentStyle: React.CSSProperties = {
-  backgroundColor: '#1e293b',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '16px',
-  width: '100%',
-  maxWidth: '600px',
-  padding: '1.5rem',
-  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)',
-  color: '#fff'
-};
-
-const modalHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-  paddingBottom: '1rem',
-  marginBottom: '1rem'
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#94a3b8',
-  cursor: 'pointer',
-  padding: '4px',
-  borderRadius: '6px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center'
-};
-
-const formStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.25rem'
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.85rem',
-  fontWeight: '600',
-  color: '#94a3b8',
-  marginBottom: '0.4rem'
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.75rem 1rem',
-  backgroundColor: 'rgba(15, 23, 42, 0.6)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '8px',
-  color: '#fff',
-  fontSize: '0.95rem',
-  outline: 'none'
-};
-
-const modalFooterStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: '0.75rem',
-  marginTop: '0.5rem'
-};
-
-const cancelBtnStyle: React.CSSProperties = {
-  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  color: '#fff',
-  padding: '0.75rem 1.25rem',
-  borderRadius: '8px',
-  fontWeight: '600',
-  border: 'none',
-  cursor: 'pointer'
-};
-
-const submitBtnStyle: React.CSSProperties = {
-  backgroundColor: '#FACC15',
-  color: '#0f172a',
-  padding: '0.75rem 1.25rem',
-  borderRadius: '8px',
-  fontWeight: '700',
-  border: 'none',
-  cursor: 'pointer'
-};
-
-const detailItemStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: '1rem',
-  backgroundColor: 'rgba(15, 23, 42, 0.4)',
-  padding: '0.75rem 1rem',
-  borderRadius: '8px',
-  border: '1px solid rgba(255, 255, 255, 0.03)'
-};
-
-const detailLabelStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  color: '#94a3b8',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em'
-};
-
-const detailValueStyle: React.CSSProperties = {
-  fontSize: '0.95rem',
-  fontWeight: 500,
-  marginTop: '2px'
-};
