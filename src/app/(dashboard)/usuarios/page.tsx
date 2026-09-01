@@ -7,7 +7,9 @@ import {
   ShieldCheck,
   Shield,
   Home,
-  X
+  X,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { usuariosApi, Usuario } from '@/lib/api';
 
@@ -18,9 +20,14 @@ export default function UsuariosPage() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
   
+  // State para confirmación de eliminación
+  const [deletingUser, setDeletingUser] = useState<Usuario | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -44,28 +51,70 @@ export default function UsuariosPage() {
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setEditingUserId(null);
+    setFormData({
+      email: '',
+      password: '',
+      rol: 'GUARDIA'
+    });
+    setModalError('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (u: Usuario) => {
+    setEditingUserId(u.id || null);
+    setFormData({
+      email: u.email,
+      password: '', // Dejar en blanco si no se desea cambiar
+      rol: u.rol
+    });
+    setModalError('');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setModalError('');
     
     try {
-      await usuariosApi.createUsuario({
-        email: formData.email,
-        password: formData.password,
-        rol: formData.rol
-      });
+      if (editingUserId) {
+        // EDICIÓN
+        await usuariosApi.updateUsuario(editingUserId, {
+          email: formData.email,
+          rol: formData.rol,
+          ...(formData.password ? { password: formData.password } : {})
+        });
+      } else {
+        // CREACIÓN
+        await usuariosApi.createUsuario({
+          email: formData.email,
+          password: formData.password,
+          rol: formData.rol
+        });
+      }
+
       setIsModalOpen(false);
-      setFormData({
-        email: '',
-        password: '',
-        rol: 'GUARDIA'
-      });
-      fetchData(); // Refresh data
+      fetchData(); // Recargar datos
     } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Error al crear el usuario. Verifique si el email ya existe.');
+      setModalError(err.response?.data?.message || err.message || 'Error al procesar el usuario.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser || !deletingUser.id) return;
+    setIsDeleting(true);
+    try {
+      await usuariosApi.deleteUsuario(deletingUser.id);
+      setDeletingUser(null);
+      fetchData();
+    } catch (err: any) {
+      alert('Error al eliminar usuario: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -77,6 +126,9 @@ export default function UsuariosPage() {
       case 'SUPERVISOR':
         return <ShieldCheck size={16} style={{ color: 'var(--warning)' }} />;
       case 'GUARDIA':
+      case 'GUARDIA_PATRULLERO':
+      case 'GUARDIA_MOTORIZADO':
+      case 'OPERADOR_C2':
         return <Shield size={16} style={{ color: 'var(--success)' }} />;
       default:
         return <Home size={16} style={{ color: 'var(--text-secondary)' }} />;
@@ -105,7 +157,7 @@ export default function UsuariosPage() {
         </div>
         
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreateModal}
           style={{ 
             display: 'flex', alignItems: 'center', gap: '0.5rem', 
             padding: '0.75rem 1.25rem', backgroundColor: 'var(--primary)', 
@@ -124,7 +176,7 @@ export default function UsuariosPage() {
         </div>
       )}
 
-      {/* Content */}
+      {/* Content Table */}
       <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '1rem', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
         {usuarios.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -138,6 +190,7 @@ export default function UsuariosPage() {
                 <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Correo Electrónico</th>
                 <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Rol</th>
                 <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Fecha de Creación</th>
+                <th style={{ padding: '1rem 1.5rem', fontWeight: '600', color: 'var(--text-secondary)', fontSize: '0.875rem', textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -154,9 +207,9 @@ export default function UsuariosPage() {
                       {getRoleIcon(u.rol)}
                       <span style={{ 
                         fontWeight: '600', fontSize: '0.875rem',
-                        color: u.rol === 'ADMIN' ? 'var(--primary)' : 
+                        color: (u.rol === 'ADMIN' || u.rol === 'SISADMIN') ? 'var(--primary)' : 
                                u.rol === 'SUPERVISOR' ? 'var(--warning)' :
-                               u.rol === 'GUARDIA' ? 'var(--success)' : 'var(--text-secondary)' 
+                               u.rol.includes('GUARDIA') || u.rol === 'OPERADOR_C2' ? 'var(--success)' : 'var(--text-secondary)' 
                       }}>
                         {u.rol}
                       </span>
@@ -165,6 +218,48 @@ export default function UsuariosPage() {
                   <td style={{ padding: '1rem 1.5rem', color: 'var(--text-secondary)' }}>
                     {u.creado_en ? new Date(u.creado_en).toLocaleDateString() : '--'}
                   </td>
+                  <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => handleOpenEditModal(u)}
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          backgroundColor: 'var(--bg-body)',
+                          color: 'var(--text-primary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          fontSize: '0.75rem'
+                        }}
+                        title="Editar Usuario"
+                      >
+                        <Pencil size={14} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => setDeletingUser(u)}
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          backgroundColor: '#FEE2E2',
+                          color: '#DC2626',
+                          border: '1px solid #FCA5A5',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          fontSize: '0.75rem'
+                        }}
+                        title="Eliminar Usuario"
+                      >
+                        <Trash2 size={14} />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -172,7 +267,7 @@ export default function UsuariosPage() {
         )}
       </div>
 
-      {/* Modal Nuevo Usuario */}
+      {/* Modal Crear / Editar Usuario */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -187,7 +282,9 @@ export default function UsuariosPage() {
             overflow: 'hidden', border: '1px solid var(--border-color)'
           }}>
             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>Registrar Nuevo Usuario</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--text-primary)' }}>
+                {editingUserId ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}
+              </h2>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
@@ -216,14 +313,16 @@ export default function UsuariosPage() {
               </div>
 
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Contraseña Temporal</label>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+                  {editingUserId ? 'Nueva Contraseña (Opcional)' : 'Contraseña Temporal'}
+                </label>
                 <input 
                   type="password" 
-                  required
+                  required={!editingUserId}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
-                  placeholder="Crea una contraseña segura"
+                  placeholder={editingUserId ? 'Dejar en blanco para mantener la actual' : 'Crea una contraseña segura'}
                   minLength={6}
                 />
               </div>
@@ -243,12 +342,6 @@ export default function UsuariosPage() {
                   <option value="ADMIN">Administrador (Residencial)</option>
                   <option value="RESIDENTE">Residente (Acceso a App)</option>
                 </select>
-                <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  {formData.rol === 'GUARDIA' && 'Los guardias pueden registrar visitas y realizar rondas.'}
-                  {formData.rol === 'SUPERVISOR' && 'Los supervisores pueden gestionar rondas y turnos de los guardias.'}
-                  {formData.rol === 'ADMIN' && 'Los administradores tienen control total sobre este residencial.'}
-                  {formData.rol === 'RESIDENTE' && 'Los residentes solo pueden pre-registrar visitas a su propia casa.'}
-                </p>
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
@@ -264,10 +357,49 @@ export default function UsuariosPage() {
                   disabled={isSubmitting}
                   style={{ padding: '0.75rem 1.5rem', borderRadius: '0.5rem', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '500', cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1 }}
                 >
-                  {isSubmitting ? 'Creando...' : 'Crear Usuario'}
+                  {isSubmitting ? 'Guardando...' : (editingUserId ? 'Guardar Cambios' : 'Crear Usuario')}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmación de Eliminación */}
+      {deletingUser && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '1rem',
+            width: '100%', maxWidth: '420px',
+            boxShadow: 'var(--shadow-card)',
+            padding: '1.5rem', border: '1px solid var(--border-color)'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)', marginTop: 0 }}>
+              ¿Eliminar Usuario?
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: '1.5' }}>
+              ¿Estás seguro de que deseas eliminar la cuenta de <strong>{deletingUser.email}</strong>? Esta acción revocará todos sus accesos de inmediato.
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setDeletingUser(null)}
+                style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-primary)', fontWeight: '500', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                disabled={isDeleting}
+                style={{ padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: 'none', backgroundColor: '#DC2626', color: 'white', fontWeight: '500', cursor: isDeleting ? 'not-allowed' : 'pointer', opacity: isDeleting ? 0.7 : 1 }}
+              >
+                {isDeleting ? 'Eliminando...' : 'Sí, Eliminar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

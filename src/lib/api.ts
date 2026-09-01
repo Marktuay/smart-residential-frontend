@@ -223,6 +223,12 @@ export const usuariosApi = {
   createUsuario: async (data: Usuario): Promise<Usuario> => {
     const response = await api.post('/usuarios', data);
     return response.data;
+  },
+  updateUsuario: async (id: number, data: Partial<Usuario>): Promise<void> => {
+    await api.put(`/usuarios/${id}`, data);
+  },
+  deleteUsuario: async (id: number): Promise<void> => {
+    await api.delete(`/usuarios/${id}`);
   }
 };
 
