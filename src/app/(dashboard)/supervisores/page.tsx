@@ -101,7 +101,8 @@ export default function SupervisoresPage() {
     setIsLoading(true);
     try {
       const allUsers = await usuariosApi.getUsuarios();
-      setSupervisores(allUsers.filter(u => u.rol === 'SUPERVISOR' || u.rol === 'GUARDIA'));
+      const rolesPersonal = ['SUPERVISOR', 'GUARDIA', 'GUARDIA_PATRULLERO', 'GUARDIA_MOTORIZADO', 'OPERADOR_C2'];
+      setSupervisores(allUsers.filter(u => rolesPersonal.includes(u.rol)));
     } catch (err) {
       console.error("Error al obtener usuarios para supervisores:", err);
     } finally {
