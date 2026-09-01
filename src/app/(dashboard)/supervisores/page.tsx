@@ -695,7 +695,10 @@ export default function SupervisoresPage() {
                     style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
                   >
                     <option value="SUPERVISOR">Supervisor de Seguridad</option>
-                    <option value="GUARDIA">Guarda de Garita</option>
+                    <option value="GUARDIA">Guarda de Garita / Acceso</option>
+                    <option value="GUARDIA_PATRULLERO">Guarda Patrullero (Rondas QR)</option>
+                    <option value="GUARDIA_MOTORIZADO">Guarda Motorizado / Reacción</option>
+                    <option value="OPERADOR_C2">Operador C2 / Centro de Mando</option>
                   </select>
                 </div>
 

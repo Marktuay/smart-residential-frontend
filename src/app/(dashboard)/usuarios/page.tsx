@@ -235,7 +235,10 @@ export default function UsuariosPage() {
                   onChange={(e) => setFormData({...formData, rol: e.target.value})}
                   style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-body)', color: 'var(--text-primary)', outline: 'none' }}
                 >
-                  <option value="GUARDIA">Guardia de Seguridad</option>
+                  <option value="GUARDIA">Guardia de Garita / Acceso</option>
+                  <option value="GUARDIA_PATRULLERO">Guardia Patrullero (Rondas QR)</option>
+                  <option value="GUARDIA_MOTORIZADO">Guardia Motorizado / Reacción</option>
+                  <option value="OPERADOR_C2">Operador C2 / Centro de Mando</option>
                   <option value="SUPERVISOR">Supervisor de Turno</option>
                   <option value="ADMIN">Administrador (Residencial)</option>
                   <option value="RESIDENTE">Residente (Acceso a App)</option>
