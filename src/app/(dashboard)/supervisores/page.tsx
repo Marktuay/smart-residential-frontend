@@ -724,14 +724,14 @@ export default function SupervisoresPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Correo Electrónico *</label>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Nombre de Usuario (Login) *</label>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    placeholder="Ej. guardia@ncsecurity.net"
+                    placeholder="Ej. guarda01 o jperez"
                     value={newColaborador.email}
                     onChange={(e) => setNewColaborador({ ...newColaborador, email: e.target.value })}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none' }}
                   />
                 </div>
 
@@ -743,7 +743,7 @@ export default function SupervisoresPage() {
                     placeholder="••••••••"
                     value={newColaborador.password}
                     onChange={(e) => setNewColaborador({ ...newColaborador, password: e.target.value })}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none' }}
                   />
                 </div>
               </div>
