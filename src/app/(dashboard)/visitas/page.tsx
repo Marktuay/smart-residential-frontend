@@ -116,9 +116,12 @@ export default function VisitasPage() {
     }
   };
 
-  const getWhatsAppLink = (v: Visita) => {
-    const text = encodeURIComponent(`Estimado residente de Casa ${v.numero_casa}, le notificamos que el visitante ${v.nombre_visitante} (Identificación: ${v.cedula_visitante || 'No especificada'}) ha sido registrado en garita.`);
-    return `https://wa.me/?text=${text}`;
+  const [phoneInput, setPhoneInput] = useState<string>('');
+
+  const getWhatsAppLink = (v: Visita, phone?: string) => {
+    const text = encodeURIComponent(`Estimado residente de la Casa ${v.numero_casa}, New Century Security le notifica que su visita el Sr(a). ${v.nombre_visitante} (Cédula: ${v.cedula_visitante || 'Verificada en Garita'}) ha ingresado por la garita principal.`);
+    const cleanPhone = phone ? phone.replace(/[^0-9]/g, '') : '';
+    return cleanPhone ? `https://wa.me/${cleanPhone.length === 8 ? '505' + cleanPhone : cleanPhone}?text=${text}` : `https://wa.me/?text=${text}`;
   };
 
   const filteredVisitas = visitas.filter(v => {
@@ -489,13 +492,26 @@ export default function VisitasPage() {
             </div>
             
             <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>¿Enviar Notificación?</h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.75rem', lineHeight: '1.5' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: '1.5' }}>
               Notificar al residente de la <strong>Casa {selectedVisitaForNotify.numero_casa}</strong> sobre el ingreso de <strong>{selectedVisitaForNotify.nombre_visitante}</strong>.
             </p>
 
+            <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
+                📱 Teléfono de WhatsApp del Residente (Opcional)
+              </label>
+              <input
+                type="text"
+                placeholder="Ej. 88880000"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               <a
-                href={getWhatsAppLink(selectedVisitaForNotify)}
+                href={getWhatsAppLink(selectedVisitaForNotify, phoneInput)}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -509,10 +525,11 @@ export default function VisitasPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '0.625rem'
+                  gap: '0.625rem',
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)'
                 }}
               >
-                <MessageSquare size={20} /> Vía WhatsApp Directo
+                <MessageSquare size={20} /> Enviar Aviso por WhatsApp
               </a>
 
               <button
