@@ -78,6 +78,7 @@ export default function SupervisoresPage() {
 
   // Formulario Nuevo Colaborador
   const [newColaborador, setNewColaborador] = useState({
+    nombre: '',
     email: '',
     password: '',
     rol: 'SUPERVISOR',
@@ -128,6 +129,7 @@ export default function SupervisoresPage() {
       });
       
       setNewColaborador({
+        nombre: '',
         email: '',
         password: '',
         rol: 'SUPERVISOR',
@@ -722,6 +724,18 @@ export default function SupervisoresPage() {
                 </div>
               )}
 
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Nombre Completo del Colaborador *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Juan Carlos Pérez"
+                  value={newColaborador.nombre}
+                  onChange={(e) => setNewColaborador({ ...newColaborador, nombre: e.target.value })}
+                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>Nombre de Usuario (Login) *</label>
@@ -731,7 +745,7 @@ export default function SupervisoresPage() {
                     placeholder="Ej. guarda01 o jperez"
                     value={newColaborador.email}
                     onChange={(e) => setNewColaborador({ ...newColaborador, email: e.target.value })}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -743,7 +757,7 @@ export default function SupervisoresPage() {
                     placeholder="••••••••"
                     value={newColaborador.password}
                     onChange={(e) => setNewColaborador({ ...newColaborador, password: e.target.value })}
-                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none' }}
+                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--bg-body)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
