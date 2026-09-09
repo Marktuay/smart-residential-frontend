@@ -153,7 +153,13 @@ export default function FlotaPage() {
           </h1>
           <p style={{ color: '#64748b', marginTop: '0.5rem' }}>Gestión orquestada por máquina de estados para camiones y maquinaria pesada.</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link href="/flota/inspeccion">
+            <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#1e293b', fontWeight: '600', cursor: 'pointer' }}>
+              <ClipboardCheck size={18} color="#FACC15" />
+              Checklist 360 (PWA)
+            </button>
+          </Link>
           <Link href="/flota/vehiculos">
             <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', backgroundColor: 'white', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
               <Wrench size={18} />

@@ -105,6 +105,11 @@ const Sidebar = () => {
             Control de Flota 360
           </div>
         </Link>
+        <div style={{ paddingLeft: '3rem', paddingBottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <Link href="/flota"><span style={{ fontSize: '0.85rem', color: isActive('/flota') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Solicitudes y FSM</span></Link>
+          <Link href="/flota/inspeccion"><span style={{ fontSize: '0.85rem', color: isActive('/flota/inspeccion') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Checklist 360 (PWA)</span></Link>
+          <Link href="/flota/vehiculos"><span style={{ fontSize: '0.85rem', color: isActive('/flota/vehiculos') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Catálogo de Flota</span></Link>
+        </div>
         <Link href="/supervisores">
           <div className={`sidebar-item ${isActive('/supervisores')}`}>
             <UserCog size={18} color="#FACC15" className="sidebar-item-icon" />
