@@ -391,3 +391,94 @@ export const pushApi = {
     return response.data;
   }
 };
+
+// --- Módulo de Flota Vehicular y Checklist 360 ---
+
+export interface VehiculoFlota {
+  id?: number;
+  residencial_id?: string;
+  codigo_unidad: string;
+  tipo_unidad: string; // CAMION, RETROEXCAVADORA, CABEZAL, MONTACARGAS, GRUA, OTRO
+  marca_modelo: string;
+  placa?: string;
+  qr_code?: string;
+  horometro_km_actual?: number;
+  estado?: string; // OPERATIVO, EN_MANTENIMIENTO, INACTIVO
+  created_at?: string;
+}
+
+export interface SolicitudFlota {
+  id?: number;
+  residencial_id?: string;
+  codigo_solicitud?: string;
+  punto_origen_id: string;
+  punto_destino_id: string;
+  vehiculo_id?: number;
+  vehiculo_codigo?: string;
+  vehiculo_tipo?: string;
+  conductor_id?: number;
+  conductor_nombre?: string;
+  estado_actual?: string;
+  equipo_adicional_json?: string;
+  creado_por?: number;
+  creado_por_nombre?: string;
+  creado_en?: string;
+  actualizado_en?: string;
+}
+
+export interface ItemInspeccion360 {
+  id?: number;
+  inspeccion_id?: number;
+  categoria: string;
+  item_nombre: string;
+  estado_item: string; // BUENO, REGULAR, MALO, NO_APLICA
+  foto_url?: string;
+}
+
+export interface Inspeccion360 {
+  id?: number;
+  solicitud_id: number;
+  residencial_id?: string;
+  etapa: string; // TALLER_SALIDA, GARITA_SALIDA, GARITA_LLEGADA, TALLER_CIERRE
+  inspector_id?: number;
+  inspector_nombre?: string;
+  resultado: string; // APROBADO, RECHAZADO, CON_OBSERVACION
+  horometro_km?: number;
+  nivel_combustible?: string;
+  observaciones?: string;
+  fecha_inspeccion?: string;
+  detalles?: ItemInspeccion360[];
+}
+
+export const flotaApi = {
+  getVehiculos: async (): Promise<VehiculoFlota[]> => {
+    const response = await api.get('/flota/vehiculos');
+    return response.data;
+  },
+  createVehiculo: async (data: VehiculoFlota): Promise<VehiculoFlota> => {
+    const response = await api.post('/flota/vehiculos', data);
+    return response.data;
+  },
+  getSolicitudes: async (): Promise<SolicitudFlota[]> => {
+    const response = await api.get('/flota/solicitudes');
+    return response.data;
+  },
+  createSolicitud: async (data: Partial<SolicitudFlota>): Promise<SolicitudFlota> => {
+    const response = await api.post('/flota/solicitudes', data);
+    return response.data;
+  },
+  asignarSolicitud: async (id: number, vehiculo_id: number, conductor_id: number): Promise<void> => {
+    await api.put(`/flota/solicitudes/${id}/asignar`, { vehiculo_id, conductor_id });
+  },
+  registrarInspeccion: async (id: number, data: Inspeccion360): Promise<Inspeccion360> => {
+    const response = await api.post(`/flota/solicitudes/${id}/inspeccion`, data);
+    return response.data;
+  },
+  getInspecciones: async (id: number): Promise<Inspeccion360[]> => {
+    const response = await api.get(`/flota/solicitudes/${id}/inspecciones`);
+    return response.data;
+  },
+  transicionEstado: async (id: number, nuevo_estado: string): Promise<void> => {
+    await api.put(`/flota/solicitudes/${id}/estado`, { nuevo_estado });
+  }
+};

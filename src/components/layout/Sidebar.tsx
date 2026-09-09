@@ -18,7 +18,8 @@ import {
   FileText,
   QrCode,
   Bell,
-  Navigation
+  Navigation,
+  Truck
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -96,6 +97,12 @@ const Sidebar = () => {
           <div className={`sidebar-item ${isActive('/visitas')}`}>
             <ClipboardList size={18} color="#FACC15" className="sidebar-item-icon" />
             Control de Accesos
+          </div>
+        </Link>
+        <Link href="/flota">
+          <div className={`sidebar-item ${isActive('/flota')}`}>
+            <Truck size={18} color="#FACC15" className="sidebar-item-icon" />
+            Control de Flota 360
           </div>
         </Link>
         <Link href="/supervisores">
