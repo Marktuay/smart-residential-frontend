@@ -99,16 +99,47 @@ const Sidebar = () => {
             Control de Accesos
           </div>
         </Link>
-        <Link href="/flota">
-          <div className={`sidebar-item ${isActive('/flota')}`}>
-            <Truck size={18} color="#FACC15" className="sidebar-item-icon" />
-            Control de Flota 360
+        {/* Módulo Especial Destacado: Control de Flota 360 */}
+        <div style={{ 
+          margin: '0.75rem 0.5rem', 
+          padding: '0.5rem', 
+          borderRadius: '0.75rem', 
+          backgroundColor: 'rgba(250, 204, 21, 0.05)', 
+          border: '1px solid rgba(250, 204, 21, 0.35)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        }}>
+          <Link href="/flota">
+            <div className={`sidebar-item ${isActive('/flota')}`} style={{ margin: 0, fontWeight: 'bold' }}>
+              <Truck size={20} color="#FACC15" className="sidebar-item-icon" />
+              <span>Control de Flota 360</span>
+              <span style={{ 
+                marginLeft: 'auto', 
+                fontSize: '0.6rem', 
+                fontWeight: 'bold', 
+                backgroundColor: '#FACC15', 
+                color: '#1e293b', 
+                padding: '0.15rem 0.4rem', 
+                borderRadius: '0.25rem',
+                letterSpacing: '0.5px'
+              }}>
+                MÓDULO 360
+              </span>
+            </div>
+          </Link>
+          <div style={{ paddingLeft: '2.4rem', paddingTop: '0.5rem', paddingBottom: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            <Link href="/flota" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isActive('/flota') ? '#FACC15' : '#94a3b8' }} />
+              <span style={{ fontSize: '0.825rem', fontWeight: isActive('/flota') ? '600' : '400', color: isActive('/flota') ? '#FACC15' : '#cbd5e1' }}>Solicitudes y FSM</span>
+            </Link>
+            <Link href="/flota/inspeccion" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isActive('/flota/inspeccion') ? '#60a5fa' : '#94a3b8' }} />
+              <span style={{ fontSize: '0.825rem', fontWeight: isActive('/flota/inspeccion') ? '600' : '400', color: isActive('/flota/inspeccion') ? '#60a5fa' : '#93c5fd' }}>Checklist 360 (PWA)</span>
+            </Link>
+            <Link href="/flota/vehiculos" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: isActive('/flota/vehiculos') ? '#FACC15' : '#94a3b8' }} />
+              <span style={{ fontSize: '0.825rem', fontWeight: isActive('/flota/vehiculos') ? '600' : '400', color: isActive('/flota/vehiculos') ? '#FACC15' : '#cbd5e1' }}>Catálogo de Flota</span>
+            </Link>
           </div>
-        </Link>
-        <div style={{ paddingLeft: '3rem', paddingBottom: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <Link href="/flota"><span style={{ fontSize: '0.85rem', color: isActive('/flota') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Solicitudes y FSM</span></Link>
-          <Link href="/flota/inspeccion"><span style={{ fontSize: '0.85rem', color: isActive('/flota/inspeccion') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Checklist 360 (PWA)</span></Link>
-          <Link href="/flota/vehiculos"><span style={{ fontSize: '0.85rem', color: isActive('/flota/vehiculos') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Catálogo de Flota</span></Link>
         </div>
         <Link href="/supervisores">
           <div className={`sidebar-item ${isActive('/supervisores')}`}>
