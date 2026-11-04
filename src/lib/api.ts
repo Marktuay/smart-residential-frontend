@@ -53,6 +53,46 @@ api.interceptors.response.use(
 
 export default api;
 
+// --- Módulo de Dashboard / Centro de Mando ---
+
+export interface ActividadDia {
+  name: string;
+  accesos: number;
+  rondas: number;
+}
+
+export interface NovedadReciente {
+  id: number;
+  tipo: string;
+  titulo: string;
+  desc: string;
+  nivel?: string;
+  fecha: string;
+  time: string;
+}
+
+export interface DashboardStats {
+  activos: number;
+  criticos: number;
+  resueltos_hoy: number;
+  total_historico: number;
+  rondas_hoy: number;
+  visitas_hoy: number;
+  complejos: number;
+  casas_qr: number;
+  residentes: number;
+  usuarios_activos: number;
+  actividad_semanal?: ActividadDia[];
+  ultimas_novedades?: NovedadReciente[];
+}
+
+export const dashboardApi = {
+  getStats: async (): Promise<DashboardStats> => {
+    const response = await api.get('/dashboard/stats');
+    return response.data;
+  }
+};
+
 // --- Módulo de Rondas ---
 
 export interface ProgramaRonda {

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Ubicacion, HistorialUbicacion } from '@/lib/api';
+import { Ubicacion, HistorialUbicacion, PuntoQR } from '@/lib/api';
 import L from 'leaflet';
 
 const getNombreFromEmail = (email?: string, id?: number) => {
@@ -26,6 +26,25 @@ const createCustomGuardIcon = (nombre: string) => {
           <div style="width: 10px; height: 10px; background-color: #10B981; border-radius: 50%;"></div>
         </div>
         <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #2563EB; margin-top: -1px;"></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+};
+
+const createCheckpointIcon = (nombre: string, hasContract: boolean, isHouse: boolean) => {
+  const bg = isHouse ? (hasContract ? '#16A34A' : '#CA8A04') : '#2563EB';
+  const iconSymbol = isHouse ? (hasContract ? '🛡️' : '🏠') : '📍';
+
+  return L.divIcon({
+    className: 'custom-checkpoint-pin',
+    html: `
+      <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; position: relative;">
+        <div style="background-color: #0F172A; color: #FFFFFF; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 8px; border: 1px solid ${bg}; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); margin-bottom: 2px; display: flex; align-items: center; gap: 3px;">
+          <span>${iconSymbol}</span> <span>${nombre}</span>
+        </div>
+        <div style="width: 14px; height: 14px; background-color: ${bg}; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"></div>
       </div>
     `,
     iconSize: [0, 0],
@@ -64,9 +83,10 @@ interface MapProps {
   historial: HistorialUbicacion[];
   mostrarHistorial: boolean;
   residencialInfo?: {latitud: number, longitud: number, zoom: number} | null;
+  puntosQR?: PuntoQR[];
 }
 
-export default function MapContainerComponent({ guardiasActivos, historial, mostrarHistorial, residencialInfo }: MapProps) {
+export default function MapContainerComponent({ guardiasActivos, historial, mostrarHistorial, residencialInfo, puntosQR }: MapProps) {
   const centroPorDefecto: [number, number] = residencialInfo ? [residencialInfo.latitud, residencialInfo.longitud] : [12.1364, -86.2514]; 
   const zoomInicial = residencialInfo ? residencialInfo.zoom : 13;
 
@@ -94,6 +114,43 @@ export default function MapContainerComponent({ guardiasActivos, historial, most
       {mostrarHistorial && polylinePositions.length > 0 && (
         <MapController bounds={polylinePositions} />
       )}
+
+      {/* Puntos QR de Control y Casas Residenciales en el Mapa */}
+      {!mostrarHistorial && puntosQR && puntosQR.map((punto) => {
+        if (!punto.latitud || !punto.longitud) return null;
+        const isHouse = !!punto.casa_id;
+        const icon = createCheckpointIcon(punto.nombre, !!punto.tiene_contrato_seguridad, isHouse);
+
+        return (
+          <Marker
+            key={`qr-${punto.id}`}
+            position={[punto.latitud, punto.longitud]}
+            icon={icon}
+          >
+            <Popup>
+              <div style={{ color: '#0f172a', padding: '4px' }}>
+                <strong style={{ fontSize: '13px', color: '#0f172a' }}>
+                  {isHouse ? '🏠 Punto Residencial' : '📍 Punto de Control'}
+                </strong><br />
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{punto.nombre}</span><br />
+                {punto.numero_casa && (
+                  <span style={{ fontSize: '11px', color: '#ca8a04' }}>
+                    Casa {punto.numero_casa} {punto.bloque ? `(${punto.bloque})` : ''}<br />
+                  </span>
+                )}
+                {isHouse && (
+                  <span style={{ fontSize: '11px', color: punto.tiene_contrato_seguridad ? '#16a34a' : '#dc2626', fontWeight: 'bold' }}>
+                    {punto.tiene_contrato_seguridad ? '✓ Contrato de Seguridad Activo' : '✗ Sin Contrato de Seguridad'}<br />
+                  </span>
+                )}
+                <span style={{ fontSize: '10px', color: '#64748b' }}>
+                  Token QR: {punto.codigo_qr}
+                </span>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {!mostrarHistorial && guardiasActivos.map((guardia) => {
         const nombreGuardia = getNombreFromEmail(guardia.email, guardia.usuario_id);

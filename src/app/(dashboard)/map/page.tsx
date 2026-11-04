@@ -1,14 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Map as MapIcon, History, Crosshair, Users, Calendar, Clock, ShieldAlert } from 'lucide-react';
-import { trackingApi, usuariosApi, residencialApi, Ubicacion, HistorialUbicacion, Usuario } from '@/lib/api';
+import { Map as MapIcon, History, Crosshair, Users, Calendar, Clock, ShieldAlert, Building, QrCode } from 'lucide-react';
+import { trackingApi, usuariosApi, residencialApi, puntosQrApi, Ubicacion, HistorialUbicacion, Usuario, PuntoQR, ResidencialInfo } from '@/lib/api';
 import LiveMap from '@/components/map/LiveMap';
 
 export default function OperativeMapPage() {
   const [modo, setModo] = useState<'vivo' | 'historial'>('vivo');
   const [guardiasLive, setGuardiasLive] = useState<Ubicacion[]>([]);
   const [guardiasDisponibles, setGuardiasDisponibles] = useState<Usuario[]>([]);
+  const [puntos, setPuntos] = useState<PuntoQR[]>([]);
+  const [mostrarPuntos, setMostrarPuntos] = useState<boolean>(true);
+  
+  // SISADMIN Multi-tenant
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [residenciales, setResidenciales] = useState<ResidencialInfo[]>([]);
+  const [selectedResidencialId, setSelectedResidencialId] = useState<string>('');
   
   // Estados para historial (Fecha y Hora)
   const [guardiaSeleccionado, setGuardiaSeleccionado] = useState<string>('');
@@ -21,6 +28,42 @@ export default function OperativeMapPage() {
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [residencialInfo, setResidencialInfo] = useState<{latitud: number, longitud: number, zoom: number} | null>(null);
 
+  useEffect(() => {
+    const role = localStorage.getItem('user_role');
+    const resId = localStorage.getItem('residencial_id') || '';
+    setUserRole(role);
+    setSelectedResidencialId(resId);
+
+    if (role === 'SISADMIN') {
+      residencialApi.getResidenciales().then(list => setResidenciales(list || [])).catch(() => {});
+    }
+  }, []);
+
+  const handleResidencialChange = (newResId: string) => {
+    setSelectedResidencialId(newResId);
+    localStorage.setItem('residencial_id', newResId);
+    fetchData();
+  };
+
+  const fetchData = async () => {
+    try {
+      const [dataPuntos, info] = await Promise.all([
+        puntosQrApi.getPuntos().catch(() => []),
+        residencialApi.getInfo().catch(() => null)
+      ]);
+      setPuntos(dataPuntos || []);
+      if (info) {
+        setResidencialInfo({
+          latitud: info.latitud_centro,
+          longitud: info.longitud_centro,
+          zoom: info.zoom_defecto
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Cargar live tracking y info del residencial
   useEffect(() => {
     let intervalo: NodeJS.Timeout;
@@ -28,27 +71,14 @@ export default function OperativeMapPage() {
       try {
         if (modo === 'vivo') {
           const data = await trackingApi.getUbicaciones();
-          setGuardiasLive(data);
+          setGuardiasLive(data || []);
         }
       } catch (err) {
         console.error('Error fetching live tracking:', err);
       }
     };
 
-    const fetchResidencial = async () => {
-      try {
-        const info = await residencialApi.getInfo();
-        setResidencialInfo({
-          latitud: info.latitud_centro,
-          longitud: info.longitud_centro,
-          zoom: info.zoom_defecto
-        });
-      } catch (err) {
-        console.error('Error fetching residencial info:', err);
-      }
-    };
-
-    fetchResidencial();
+    fetchData();
 
     if (modo === 'vivo') {
       fetchLive();
@@ -58,7 +88,7 @@ export default function OperativeMapPage() {
     return () => {
       if (intervalo) clearInterval(intervalo);
     };
-  }, [modo]);
+  }, [modo, selectedResidencialId]);
 
   // Cargar usuarios para el select de historial
   useEffect(() => {
@@ -117,6 +147,37 @@ export default function OperativeMapPage() {
         {/* Panel lateral de controles */}
         <div style={{ width: '340px', backgroundColor: 'var(--bg-card)', borderRadius: '1rem', padding: '1.5rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
           
+          {/* SISADMIN Selector */}
+          {userRole === 'SISADMIN' && (
+            <div style={{ marginBottom: '1.25rem', backgroundColor: '#1e293b', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #334155' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: '700', color: '#FACC15', marginBottom: '0.35rem' }}>
+                <Building size={14} /> Residencial Activo:
+              </label>
+              <select
+                value={selectedResidencialId}
+                onChange={(e) => handleResidencialChange(e.target.value)}
+                style={{ width: '100%', padding: '0.4rem', backgroundColor: '#0f172a', color: '#ffffff', border: '1px solid #475569', borderRadius: '0.375rem', fontSize: '0.8125rem' }}
+              >
+                {residenciales.map(r => (
+                  <option key={r.id} value={r.id}>{r.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Toggle de Puntos QR */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.75rem', backgroundColor: '#1e293b', borderRadius: '0.5rem', marginBottom: '1rem', border: '1px solid #334155' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <QrCode size={14} color="#FACC15" /> Ver Puntos QR ({puntos.length})
+            </span>
+            <input
+              type="checkbox"
+              checked={mostrarPuntos}
+              onChange={(e) => setMostrarPuntos(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+          </div>
+
           <div style={{ display: 'flex', backgroundColor: '#1e293b', borderRadius: '0.5rem', padding: '0.25rem', marginBottom: '1.5rem' }}>
             <button
               onClick={() => setModo('vivo')}
@@ -305,6 +366,7 @@ export default function OperativeMapPage() {
             historial={historial} 
             mostrarHistorial={modo === 'historial'}
             residencialInfo={residencialInfo}
+            puntosQR={mostrarPuntos ? puntos : []}
           />
         </div>
       </div>
