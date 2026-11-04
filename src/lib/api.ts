@@ -299,12 +299,14 @@ export const residencialApi = {
 		const response = await api.post('/residenciales', data);
 		return response.data;
 	},
-	getInfo: async (): Promise<ResidencialInfo> => {
-		const response = await api.get('/residencial/info');
+	getInfo: async (residencialId?: string): Promise<ResidencialInfo> => {
+		const params = residencialId && residencialId !== 'GLOBAL' ? { residencial_id: residencialId } : {};
+		const response = await api.get('/residencial/info', { params });
 		return response.data;
 	},
-	updateConfig: async (data: Partial<ResidencialInfo>): Promise<void> => {
-		await api.put('/residencial/config', data);
+	updateConfig: async (data: Partial<ResidencialInfo>, residencialId?: string): Promise<void> => {
+		const params = residencialId && residencialId !== 'GLOBAL' ? { residencial_id: residencialId } : {};
+		await api.put('/residencial/config', data, { params });
 	},
 	getCasas: async (): Promise<Casa[]> => {
 		const response = await api.get('/casas');

@@ -68,12 +68,24 @@ export default function ConfiguracionPage() {
   const init = async () => {
     setLoading(true);
     try {
-      const userRole = localStorage.getItem('user_role');
-      if (userRole === 'SISADMIN') {
-        const list = await residencialApi.getResidenciales();
+      let list: ResidencialInfo[] = [];
+      try {
+        list = await residencialApi.getResidenciales();
         setResidenciales(list || []);
+      } catch (err) {
+        console.warn("No se pudo listar residenciales globales:", err);
       }
-      await cargarConfiguracion();
+
+      let defaultId = typeof window !== 'undefined' ? localStorage.getItem('residencial_id') : '';
+      if ((!defaultId || defaultId === 'GLOBAL') && list && list.length > 0) {
+        defaultId = list[0].id;
+        setSelectedResId(defaultId);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('residencial_id', defaultId);
+        }
+      }
+
+      await cargarConfiguracion(defaultId || undefined);
     } catch (e) {
       console.error("Error inicializando configuración:", e);
     } finally {
@@ -83,28 +95,35 @@ export default function ConfiguracionPage() {
 
   const cargarConfiguracion = async (overrideId?: string) => {
     try {
-      const info = await residencialApi.getInfo();
-      setResidencial(info);
-      setSelectedResId(info.id || '');
-      setLatitud(info.latitud_centro?.toString() || '12.1364');
-      setLongitud(info.longitud_centro?.toString() || '-86.2514');
-      setZoom(info.zoom_defecto || 13);
-      setTolerancia(info.tolerancia_ronda_mins || 15);
-      setFrecuencia(info.frecuencia_gps_seg || 10);
-      setEmailAlertas(info.email_alerta_incidentes || '');
-      setTelEmergencia(info.telefono_emergencia || '');
+      const targetId = overrideId || selectedResId || (typeof window !== 'undefined' ? localStorage.getItem('residencial_id') : undefined) || undefined;
+      const info = await residencialApi.getInfo(targetId === 'GLOBAL' ? undefined : targetId);
+      if (info) {
+        setResidencial(info);
+        setSelectedResId(info.id || '');
+        if (typeof window !== 'undefined' && info.id) {
+          localStorage.setItem('residencial_id', info.id);
+        }
+        setLatitud(info.latitud_centro?.toString() || '12.1364');
+        setLongitud(info.longitud_centro?.toString() || '-86.2514');
+        setZoom(info.zoom_defecto || 13);
+        setTolerancia(info.tolerancia_ronda_mins || 15);
+        setFrecuencia(info.frecuencia_gps_seg || 10);
+        setEmailAlertas(info.email_alerta_incidentes || '');
+        setTelEmergencia(info.telefono_emergencia || '');
+        setMensajeError('');
+      }
     } catch (err) {
       console.error("Error al cargar configuración:", err);
       setMensajeError("No se pudo cargar la configuración del residencial.");
     }
   };
 
-  const handleSelectResidencialChange = (newId: string) => {
+  const handleSelectResidencialChange = async (newId: string) => {
     setSelectedResId(newId);
     if (typeof window !== 'undefined') {
       localStorage.setItem('residencial_id', newId);
     }
-    cargarConfiguracion(newId);
+    await cargarConfiguracion(newId);
   };
 
   const guardarConfiguracion = async (e: React.FormEvent) => {
@@ -114,7 +133,9 @@ export default function ConfiguracionPage() {
     setMensajeError('');
 
     try {
+      const targetId = selectedResId || residencial?.id;
       await residencialApi.updateConfig({
+        id: targetId,
         latitud_centro: Number(latitud),
         longitud_centro: Number(longitud),
         zoom_defecto: Number(zoom),
@@ -122,7 +143,7 @@ export default function ConfiguracionPage() {
         frecuencia_gps_seg: Number(frecuencia),
         email_alerta_incidentes: emailAlertas.trim(),
         telefono_emergencia: telEmergencia.trim()
-      });
+      }, targetId);
 
       setMensajeExito("¡Configuración operativa y geográfica actualizada exitosamente!");
       setTimeout(() => setMensajeExito(''), 4000);
@@ -183,8 +204,8 @@ export default function ConfiguracionPage() {
           </p>
         </div>
 
-        {/* Selector de instalación para SISADMIN */}
-        {rol === 'SISADMIN' && residenciales.length > 0 && (
+        {/* Selector de instalación */}
+        {residenciales.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0f172a', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #1e293b' }}>
             <Building size={18} color="#FACC15" />
             <select
