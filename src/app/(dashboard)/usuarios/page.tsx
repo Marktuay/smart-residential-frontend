@@ -321,7 +321,7 @@ export default function UsuariosPage() {
   };
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1350px', margin: '0 auto', width: '100%', color: '#1e293b' }}>
+    <div style={{ maxWidth: '100%', width: '100%', minWidth: 0, boxSizing: 'border-box', color: '#1e293b' }}>
       
       {/* Encabezado Principal */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -470,8 +470,8 @@ export default function UsuariosPage() {
             <p style={{ fontSize: '0.875rem', margin: 0 }}>Intenta con otro filtro de búsqueda o da de alta un nuevo personal.</p>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+          <div style={{ overflowX: 'auto', width: '100%', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                   <th style={{ padding: '1rem 1.25rem', fontWeight: '700', color: '#475569' }}>Colaborador</th>

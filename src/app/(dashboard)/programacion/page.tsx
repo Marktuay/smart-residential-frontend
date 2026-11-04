@@ -419,7 +419,7 @@ export default function ProgramacionPage() {
   };
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto', width: '100%', color: '#1e293b' }}>
+    <div style={{ maxWidth: '100%', width: '100%', minWidth: 0, boxSizing: 'border-box', color: '#1e293b' }}>
       
       {/* Encabezado y Acciones Principales */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -612,12 +612,12 @@ export default function ProgramacionPage() {
 
       {/* Vista 1: Matriz de Rol de Guardias */}
       {viewMode === 'grid' ? (
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.75rem' }}>
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', width: '100%', maxWidth: '100%' }}>
+          <div style={{ overflowX: 'auto', width: '100%', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', textAlign: 'center', fontSize: '0.75rem' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', minWidth: '200px', position: 'sticky', left: 0, backgroundColor: '#f8fafc', zIndex: 10, borderRight: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'left', minWidth: '190px', maxWidth: '230px', position: 'sticky', left: 0, backgroundColor: '#f8fafc', zIndex: 10, borderRight: '2px solid #e2e8f0', boxShadow: '2px 0 5px rgba(0,0,0,0.04)' }}>
                     Colaborador / Puesto
                   </th>
                   {daysArray.map(d => {
@@ -696,56 +696,58 @@ export default function ProgramacionPage() {
         </div>
       ) : (
         /* Vista 2: Calendario Mensual */
-        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center', fontWeight: 'bold', marginBottom: '0.5rem', color: '#64748b', fontSize: '0.8rem' }}>
-            <div>Domingo</div><div>Lunes</div><div>Martes</div><div>Miércoles</div><div>Jueves</div><div>Viernes</div><div>Sábado</div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem' }}>
-            {Array.from({ length: new Date(year, month, 1).getDay() }, (_, i) => (
-              <div key={`empty-${i}`} style={{ minHeight: '90px', backgroundColor: '#f8fafc', borderRadius: '0.5rem', opacity: 0.4 }} />
-            ))}
-            {daysArray.map(d => {
-              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-              const turnosDelDia = turnosDelMes.filter(t => t.fecha === dateStr && t.estado !== 'CANCELADO');
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '0.75rem', border: '1px solid #e2e8f0', padding: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', overflowX: 'auto', width: '100%', maxWidth: '100%' }}>
+          <div style={{ minWidth: '700px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center', fontWeight: 'bold', marginBottom: '0.5rem', color: '#64748b', fontSize: '0.8rem' }}>
+              <div>Domingo</div><div>Lunes</div><div>Martes</div><div>Miércoles</div><div>Jueves</div><div>Viernes</div><div>Sábado</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem' }}>
+              {Array.from({ length: new Date(year, month, 1).getDay() }, (_, i) => (
+                <div key={`empty-${i}`} style={{ minHeight: '90px', backgroundColor: '#f8fafc', borderRadius: '0.5rem', opacity: 0.4 }} />
+              ))}
+              {daysArray.map(d => {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const turnosDelDia = turnosDelMes.filter(t => t.fecha === dateStr && t.estado !== 'CANCELADO');
 
-              return (
-                <div 
-                  key={d}
-                  style={{ minHeight: '90px', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.4rem', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155' }}>{d}</span>
-                    <button
-                      onClick={() => handleOpenAddModal(dateStr)}
-                      style={{ border: 'none', background: 'none', color: '#0284c7', cursor: 'pointer', padding: 0 }}
-                      title="Agregar turno este día"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', maxHeight: '110px' }}>
-                    {turnosDelDia.map(t => (
-                      <div
-                        key={t.id}
-                        onClick={() => { setSelectedTurno(t); setShowDetailModal(true); }}
-                        style={{
-                          backgroundColor: '#1e293b', color: '#FACC15',
-                          borderRadius: '0.25rem', padding: '0.2rem 0.35rem',
-                          fontSize: '0.68rem', fontWeight: '600', cursor: 'pointer',
-                          display: 'flex', justifyContent: 'space-between'
-                        }}
+                return (
+                  <div 
+                    key={d}
+                    style={{ minHeight: '90px', border: '1px solid #e2e8f0', borderRadius: '0.5rem', padding: '0.4rem', backgroundColor: '#fff', display: 'flex', flexDirection: 'column' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: '0.85rem', color: '#334155' }}>{d}</span>
+                      <button
+                        onClick={() => handleOpenAddModal(dateStr)}
+                        style={{ border: 'none', background: 'none', color: '#0284c7', cursor: 'pointer', padding: 0 }}
+                        title="Agregar turno este día"
                       >
-                        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          {t.guardia_nombre?.split(' ')[0] || 'Guardia'}
-                        </span>
-                        <span>{t.hora_inicio}</span>
-                      </div>
-                    ))}
+                        <Plus size={14} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', overflowY: 'auto', maxHeight: '110px' }}>
+                      {turnosDelDia.map(t => (
+                        <div
+                          key={t.id}
+                          onClick={() => { setSelectedTurno(t); setShowDetailModal(true); }}
+                          style={{
+                            backgroundColor: '#1e293b', color: '#FACC15',
+                            borderRadius: '0.25rem', padding: '0.2rem 0.35rem',
+                            fontSize: '0.68rem', fontWeight: '600', cursor: 'pointer',
+                            display: 'flex', justifyContent: 'space-between'
+                          }}
+                        >
+                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {t.guardia_nombre?.split(' ')[0] || 'Guardia'}
+                          </span>
+                          <span>{t.hora_inicio}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1235,7 +1237,7 @@ export default function ProgramacionPage() {
               </button>
             </div>
 
-            <div style={{ padding: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
+            <div style={{ padding: '1.25rem', maxHeight: '500px', overflowY: 'auto', overflowX: 'auto' }}>
               {loadingAudit ? (
                 <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
                   Cargando registros de auditoría de la base de datos...
@@ -1245,7 +1247,7 @@ export default function ProgramacionPage() {
                   No hay registros de auditoría registrados para turnos.
                 </div>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                       <th style={{ padding: '0.65rem 0.75rem', fontWeight: 'bold', color: '#475569' }}>Fecha y Hora</th>

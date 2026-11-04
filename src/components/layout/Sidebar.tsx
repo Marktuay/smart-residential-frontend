@@ -19,10 +19,16 @@ import {
   QrCode,
   Bell,
   Navigation,
-  Truck
+  Truck,
+  X
 } from 'lucide-react';
 
-const Sidebar = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -45,13 +51,35 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
           <div style={{ backgroundColor: 'white', padding: '0.4rem 1rem', borderRadius: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '90%' }}>
             <img src="/logo.jpg" alt="Security Logo" style={{ width: '100%', maxHeight: '45px', objectFit: 'contain' }} />
           </div>
         </div>
+        <button
+          onClick={onClose}
+          className="sidebar-close-btn"
+          aria-label="Cerrar menú"
+          style={{
+            position: 'absolute',
+            right: '0.75rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'none',
+            border: 'none',
+            color: '#9CA3AF',
+            cursor: 'pointer',
+            padding: '0.25rem',
+            borderRadius: '0.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <X size={22} color="#ffffff" />
+        </button>
       </div>
       
       <div className="sidebar-nav">

@@ -3,11 +3,21 @@
 import React from 'react';
 import { Bell, Search, Menu } from 'lucide-react';
 
-const Header = () => {
+interface HeaderProps {
+  onToggleSidebar?: () => void;
+  isSidebarOpen?: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   return (
     <header className="header">
       <div className="header-left">
-        <button className="header-icon-btn" style={{ marginRight: '1rem' }}>
+        <button 
+          className="header-icon-btn" 
+          onClick={onToggleSidebar}
+          aria-label="Abrir menú de navegación"
+          style={{ marginRight: '1rem' }}
+        >
           <Menu size={24} />
         </button>
       </div>
