@@ -141,7 +141,27 @@ export interface Casa {
 	bloque: string;
 	estado: string;
 	tiene_contrato_seguridad?: boolean;
+	residentes_nombres?: string;
+	residentes_count?: number;
+	activo?: boolean;
 	created_at?: string;
+	deleted_at?: string | null;
+}
+
+export interface CasasPaginadas {
+	items: Casa[];
+	total: number;
+	page: number;
+	limit: number;
+	total_pages: number;
+}
+
+export interface CasaFiltros {
+	search?: string;
+	bloque?: string;
+	estado?: string;
+	page?: number;
+	limit?: number;
 }
 
 export interface Residente {
@@ -150,10 +170,31 @@ export interface Residente {
 	casa_id?: number | null;
 	numero_casa?: string;
 	nombre: string;
-	telefono: string;
-	email: string;
+	cedula?: string;
+	telefono?: string;
+	telefono_emergencia?: string;
+	email?: string;
 	es_propietario: boolean;
+	casas_asignadas_ids?: number[];
+	casas_detalle?: Casa[];
+	activo?: boolean;
 	created_at?: string;
+	deleted_at?: string | null;
+}
+
+export interface ResidentesPaginados {
+	items: Residente[];
+	total: number;
+	page: number;
+	limit: number;
+	total_pages: number;
+}
+
+export interface ResidenteFiltros {
+	search?: string;
+	es_propietario?: boolean;
+	page?: number;
+	limit?: number;
 }
 
 export interface ResidencialInfo {
@@ -190,16 +231,57 @@ export const residencialApi = {
 		const response = await api.get('/casas');
 		return response.data;
 	},
+	getCasasPaginadas: async (params?: CasaFiltros): Promise<CasasPaginadas> => {
+		const response = await api.get('/casas', {
+			params: {
+				paginado: 'true',
+				page: params?.page || 1,
+				limit: params?.limit || 10,
+				search: params?.search || '',
+				bloque: params?.bloque || '',
+				estado: params?.estado || ''
+			}
+		});
+		return response.data;
+	},
 	createCasa: async (data: Casa): Promise<Casa> => {
 		const response = await api.post('/casas', data);
+		return response.data;
+	},
+	updateCasa: async (id: number, data: Partial<Casa>): Promise<any> => {
+		const response = await api.put(`/casas/${id}`, data);
+		return response.data;
+	},
+	deleteCasa: async (id: number): Promise<any> => {
+		const response = await api.delete(`/casas/${id}`);
 		return response.data;
 	},
 	getResidentes: async (): Promise<Residente[]> => {
 		const response = await api.get('/residentes');
 		return response.data;
 	},
+	getResidentesPaginados: async (params?: ResidenteFiltros): Promise<ResidentesPaginados> => {
+		const response = await api.get('/residentes', {
+			params: {
+				paginado: 'true',
+				page: params?.page || 1,
+				limit: params?.limit || 10,
+				search: params?.search || '',
+				es_propietario: params?.es_propietario !== undefined ? String(params.es_propietario) : ''
+			}
+		});
+		return response.data;
+	},
 	createResidente: async (data: Residente): Promise<Residente> => {
 		const response = await api.post('/residentes', data);
+		return response.data;
+	},
+	updateResidente: async (id: number, data: Partial<Residente>): Promise<any> => {
+		const response = await api.put(`/residentes/${id}`, data);
+		return response.data;
+	},
+	deleteResidente: async (id: number): Promise<any> => {
+		const response = await api.delete(`/residentes/${id}`);
 		return response.data;
 	}
 };
