@@ -558,7 +558,7 @@ export const trackingApi = {
     return response.data;
   },
   getHistorial: async (usuarioId: number, fechaInicio: string, fechaFin: string): Promise<HistorialUbicacion[]> => {
-    const response = await api.get(`/tracking/historial?usuario_id=${usuarioId}&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
+    const response = await api.get(`/tracking/historial?usuario_id=${usuarioId}&fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_fin=${encodeURIComponent(fechaFin)}`);
     return response.data;
   },
   updateLocation: async (data: { usuario_id: number; latitud: number; longitud: number }): Promise<void> => {

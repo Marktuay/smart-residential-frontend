@@ -18,10 +18,11 @@ export default function OperativeMapPage() {
   const [selectedResidencialId, setSelectedResidencialId] = useState<string>('');
   
   // Estados para historial (Fecha y Hora)
-  const [guardiaSeleccionado, setGuardiaSeleccionado] = useState<string>('');
-  const [fechaInicio, setFechaInicio] = useState<string>('');
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const [guardiaSeleccionado, setGuardiaSeleccionado] = useState<string>('0');
+  const [fechaInicio, setFechaInicio] = useState<string>(hoyStr);
   const [horaInicio, setHoraInicio] = useState<string>('00:00');
-  const [fechaFin, setFechaFin] = useState<string>('');
+  const [fechaFin, setFechaFin] = useState<string>(hoyStr);
   const [horaFin, setHoraFin] = useState<string>('23:59');
   
   const [historial, setHistorial] = useState<HistorialUbicacion[]>([]);
@@ -113,8 +114,11 @@ export default function OperativeMapPage() {
     try {
       const fInicio = `${fechaInicio} ${horaInicio || '00:00'}:00`;
       const fFin = `${fechaFin} ${horaFin || '23:59'}:59`;
-      const data = await trackingApi.getHistorial(parseInt(guardiaSeleccionado), fInicio, fFin);
-      setHistorial(data);
+      const data = await trackingApi.getHistorial(parseInt(guardiaSeleccionado || '0'), fInicio, fFin);
+      setHistorial(data || []);
+      if (!data || data.length === 0) {
+        alert("No se encontraron puntos de recorrido para este usuario en el rango seleccionado.");
+      }
     } catch (err) {
       console.error('Error fetching historial:', err);
       alert("Hubo un error obteniendo el historial.");
