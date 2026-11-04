@@ -210,25 +210,78 @@ export interface Usuario {
   id?: number;
   residencial_id?: string;
   email: string;
-  password?: string; // Solo para creación
+  nombre_completo?: string;
+  telefono?: string;
+  cedula?: string;
+  password?: string; // Solo para creación o cambio
   rol: string;
+  activo?: boolean;
   creado_en?: string;
+  deleted_at?: string | null;
+}
+
+export interface UsuariosPaginados {
+  items: Usuario[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface UsuarioFiltros {
+  search?: string;
+  rol?: string;
+  activo?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 export const usuariosApi = {
-  getUsuarios: async (): Promise<Usuario[]> => {
-    const response = await api.get('/usuarios');
-    return response.data;
+  getUsuarios: async (params?: UsuarioFiltros): Promise<Usuario[]> => {
+    const response = await api.get('/usuarios', { params });
+    if (response.data && Array.isArray(response.data.items)) {
+      return response.data.items;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
-  createUsuario: async (data: Usuario): Promise<Usuario> => {
+  getUsuariosPaginados: async (params?: UsuarioFiltros): Promise<UsuariosPaginados> => {
+    const response = await api.get('/usuarios', { params });
+    if (response.data && Array.isArray(response.data.items)) {
+      return response.data;
+    }
+    const items = Array.isArray(response.data) ? response.data : [];
+    return {
+      items,
+      total: items.length,
+      page: params?.page || 1,
+      limit: params?.limit || items.length,
+      total_pages: 1
+    };
+  },
+  createUsuario: async (data: Partial<Usuario>): Promise<Usuario> => {
     const response = await api.post('/usuarios', data);
     return response.data;
   },
   updateUsuario: async (id: number, data: Partial<Usuario>): Promise<void> => {
     await api.put(`/usuarios/${id}`, data);
   },
+  cambiarEstado: async (id: number, activo: boolean): Promise<void> => {
+    await api.patch(`/usuarios/${id}/estado`, { activo });
+  },
   deleteUsuario: async (id: number): Promise<void> => {
     await api.delete(`/usuarios/${id}`);
+  },
+  cargarCSV: async (file: File): Promise<{ status: string; procesados: number; total_filas: number }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/usuarios/bulk-csv', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+  cargarLoteJSON: async (items: Partial<Usuario>[]): Promise<{ status: string; procesados: number; total_filas: number }> => {
+    const response = await api.post('/usuarios/bulk-csv', items);
+    return response.data;
   }
 };
 

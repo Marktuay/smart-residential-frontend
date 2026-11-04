@@ -141,12 +141,6 @@ const Sidebar = () => {
             </Link>
           </div>
         </div>
-        <Link href="/supervisores">
-          <div className={`sidebar-item ${isActive('/supervisores')}`}>
-            <UserCog size={18} color="#FACC15" className="sidebar-item-icon" />
-            Supervisores
-          </div>
-        </Link>
         <Link href="/residencial">
           <div className={`sidebar-item ${isActive('/residencial')}`}>
             <Building size={18} color="#FACC15" className="sidebar-item-icon" />
@@ -188,7 +182,7 @@ const Sidebar = () => {
         <Link href="/usuarios">
           <div className={`sidebar-item ${isActive('/usuarios')}`}>
             <UserCog size={18} color="#FACC15" className="sidebar-item-icon" />
-            Usuarios
+            Personal y Usuarios
           </div>
         </Link>
         <Link href="/configuracion">
