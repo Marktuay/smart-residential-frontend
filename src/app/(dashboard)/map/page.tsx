@@ -112,8 +112,18 @@ export default function OperativeMapPage() {
     }
     setCargandoHistorial(true);
     try {
-      const fInicio = `${fechaInicio} ${horaInicio || '00:00'}:00`;
-      const fFin = `${fechaFin} ${horaFin || '23:59'}:59`;
+      // Convertir hora local del usuario a UTC para coincidir con la base de datos
+      const localInicio = new Date(`${fechaInicio}T${horaInicio || '00:00'}:00`);
+      const localFin = new Date(`${fechaFin}T${horaFin || '23:59'}:59`);
+      
+      const fInicio = !isNaN(localInicio.getTime())
+        ? localInicio.toISOString().replace('T', ' ').substring(0, 19)
+        : `${fechaInicio} ${horaInicio || '00:00'}:00`;
+
+      const fFin = !isNaN(localFin.getTime())
+        ? localFin.toISOString().replace('T', ' ').substring(0, 19)
+        : `${fechaFin} ${horaFin || '23:59'}:59`;
+
       const data = await trackingApi.getHistorial(parseInt(guardiaSeleccionado || '0'), fInicio, fFin);
       setHistorial(data || []);
       if (!data || data.length === 0) {
