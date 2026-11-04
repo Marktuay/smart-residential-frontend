@@ -396,13 +396,38 @@ export interface Turno {
   id?: number;
   residencial_id?: string;
   guardia_id: number;
+  guardia_nombre?: string;
   guardia_email?: string;
+  guardia_cedula?: string;
   fecha: string; // YYYY-MM-DD
   hora_inicio: string; // HH:MM
   hora_fin: string; // HH:MM
+  horas?: number;
   descripcion: string;
   ubicacion: string;
   estado: string; // PROGRAMADO, EN_CURSO, FINALIZADO, CANCELADO
+  asistencia?: string; // PENDIENTE, PRESENTE, TARDANZA, AUSENTE
+  marcado_entrada?: string;
+  marcado_salida?: string;
+  creado_por?: string;
+  created_at?: string;
+}
+
+export interface ProgramacionMasivaPayload {
+  guardia_ids: number[];
+  fecha_desde: string;
+  fecha_hasta: string;
+  hora_inicio: string;
+  hora_fin: string;
+  tipo_turno: string;
+  ubicacion: string;
+  notas?: string;
+}
+
+export interface ProgramacionMasivaResult {
+  creados: number;
+  conflictos: number;
+  mensajes: string[];
 }
 
 export const turnosApi = {
@@ -414,8 +439,19 @@ export const turnosApi = {
     const response = await api.post('/turnos', data);
     return response.data;
   },
+  createTurnoMasivo: async (payload: ProgramacionMasivaPayload): Promise<ProgramacionMasivaResult> => {
+    const response = await api.post('/turnos/masivo', payload);
+    return response.data;
+  },
   updateTurno: async (id: number, data: Turno): Promise<Turno> => {
     const response = await api.put(`/turnos/${id}`, data);
+    return response.data;
+  },
+  marcarAsistencia: async (id: number, asistencia: string): Promise<void> => {
+    await api.post(`/turnos/${id}/asistencia`, { asistencia });
+  },
+  getAuditoria: async (): Promise<any[]> => {
+    const response = await api.get('/turnos/auditoria');
     return response.data;
   },
   deleteTurno: async (id: number): Promise<void> => {
