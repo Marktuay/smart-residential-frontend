@@ -62,16 +62,43 @@ export interface ProgramaRonda {
   hora_inicio: string;
   hora_fin: string;
   recurrencia: string;
+  tolerancia_mins?: number;
   puntos?: number[]; // IDs de puntos QR
+  puntos_detalle?: PuntoQR[];
+  total_puntos?: number;
+  created_at?: string;
 }
 
 export interface AsignacionRonda {
   id?: number;
   residencial_id?: string;
   programa_id: number;
+  programa_nombre?: string;
+  hora_inicio?: string;
+  hora_fin?: string;
   usuario_id: number; // Guardia ID
+  guardia_nombre?: string;
   fecha: string; // YYYY-MM-DD
   estado?: string;
+  puntos_completados?: number;
+  puntos_total?: number;
+  porcentaje_cumplimiento?: number;
+  created_at?: string;
+}
+
+export interface MarcacionRonda {
+  id?: number;
+  residencial_id?: string;
+  asignacion_ronda_id?: number | null;
+  punto_qr_id: number;
+  punto_nombre?: string;
+  numero_casa?: string;
+  guardia_id?: number;
+  guardia_nombre?: string;
+  fecha_hora?: string;
+  latitud?: number;
+  longitud?: number;
+  observacion?: string;
 }
 
 export const rondasApi = {
@@ -83,12 +110,24 @@ export const rondasApi = {
     const response = await api.post('/rondas/programas', data);
     return response.data;
   },
+  deletePrograma: async (id: number): Promise<any> => {
+    const response = await api.delete(`/rondas/programas/${id}`);
+    return response.data;
+  },
   getAsignaciones: async (): Promise<AsignacionRonda[]> => {
     const response = await api.get('/rondas/asignaciones');
     return response.data;
   },
   createAsignacion: async (data: AsignacionRonda): Promise<AsignacionRonda> => {
     const response = await api.post('/rondas/asignaciones', data);
+    return response.data;
+  },
+  registrarMarcacion: async (data: { codigo_qr: string; asignacion_ronda_id?: number | null; latitud?: number; longitud?: number; observacion?: string }): Promise<any> => {
+    const response = await api.post('/rondas/marcacion', data);
+    return response.data;
+  },
+  getMarcaciones: async (limit?: number): Promise<MarcacionRonda[]> => {
+    const response = await api.get('/rondas/marcaciones', { params: { limit: limit || 25 } });
     return response.data;
   }
 };
@@ -378,8 +417,12 @@ export interface PuntoQR {
   latitud?: number;
   longitud?: number;
   numero_casa?: string;
+  bloque?: string;
   residente_nombre?: string;
   tiene_contrato_seguridad?: boolean;
+  ultima_marcacion?: string | null;
+  total_marcaciones?: number;
+  created_at?: string;
 }
 
 export const puntosQrApi = {
@@ -387,8 +430,16 @@ export const puntosQrApi = {
     const response = await api.get('/puntos');
     return response.data;
   },
-  createPunto: async (data: PuntoQR): Promise<PuntoQR> => {
+  createPunto: async (data: Partial<PuntoQR>): Promise<PuntoQR> => {
     const response = await api.post('/puntos', data);
+    return response.data;
+  },
+  updatePunto: async (id: number, data: Partial<PuntoQR>): Promise<PuntoQR> => {
+    const response = await api.put(`/puntos/${id}`, data);
+    return response.data;
+  },
+  deletePunto: async (id: number): Promise<any> => {
+    const response = await api.delete(`/puntos/${id}`);
     return response.data;
   }
 };
