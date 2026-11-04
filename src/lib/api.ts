@@ -495,6 +495,7 @@ export interface Incidente {
   nivel_gravedad: string;
   estado?: string;
   evidencia_url?: string;
+  ubicacion?: string;
   fecha_creacion?: string;
   fecha_resolucion?: string;
 }
