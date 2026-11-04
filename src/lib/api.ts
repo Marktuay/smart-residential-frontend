@@ -745,3 +745,21 @@ export const flotaApi = {
     await api.put(`/flota/solicitudes/${id}/estado`, { nuevo_estado });
   }
 };
+
+export interface LogAuditoria {
+  id: string | number;
+  residencial_id?: string;
+  accion: string;
+  actor: string;
+  ip: string;
+  detalles: string;
+  created_at: string;
+}
+
+export const auditoriaApi = {
+  getLogs: async (residencialId?: string): Promise<LogAuditoria[]> => {
+    const params = residencialId ? { residencial_id: residencialId } : {};
+    const response = await api.get('/audit-logs', { params });
+    return response.data;
+  }
+};

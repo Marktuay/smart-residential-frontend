@@ -1,11 +1,40 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Map, Navigation, Bell, Save, CheckCircle, AlertTriangle, Building, HelpCircle } from 'lucide-react';
+import Link from 'next/link';
+import { 
+  Settings, 
+  Map, 
+  Navigation, 
+  Bell, 
+  Save, 
+  CheckCircle, 
+  AlertTriangle, 
+  Building, 
+  HelpCircle,
+  Shield,
+  Layers,
+  MapPin,
+  ExternalLink,
+  Users
+} from 'lucide-react';
 import { residencialApi, ResidencialInfo } from '@/lib/api';
+
+const ROLES_MATRIZ = [
+  { rol: 'SISADMIN', nivel: 'Super Administrador', desc: 'Acceso global multi-inquilino, provisión de residenciales y configuración del sistema.' },
+  { rol: 'ADMIN', nivel: 'Administrador Residencial', desc: 'Gestión completa del residencial: inmuebles, residentes, rol de turnos, puntos QR y reportes.' },
+  { rol: 'SUPERVISOR', nivel: 'Operaciones y Ronda', desc: 'Supervisión en terreno, auditoría de rondas en tiempo real y resolución de incidencias.' },
+  { rol: 'OPERADOR_C2', nivel: 'Centro de Mando', desc: 'Monitoreo de centro de control de alarmas, mapa satelital y despacho de patrullas.' },
+  { rol: 'GESTOR_TRANSPORTE', nivel: 'Gestor de Flota', desc: 'Asignación de choferes y unidades pesadas en traslados de maquinaria.' },
+  { rol: 'MECANICO_TALLER', nivel: 'Taller Mecánico', desc: 'Inspecciones técnicas de Checklist 360 previo a salida de patio.' },
+  { rol: 'GUARDIA', nivel: 'Seguridad en Garita', desc: 'Control de accesos y visitas, escaneo de puntos QR satelitales y reporte exprés de novedades.' },
+  { rol: 'RESIDENTE', nivel: 'Habitante / Propietario', desc: 'Registro de visitas anticipadas, visualización de estado de seguridad y alertas comunitarias.' }
+];
 
 export default function ConfiguracionPage() {
   const [rol, setRol] = useState<string | null>(null);
+  const [residenciales, setResidenciales] = useState<ResidencialInfo[]>([]);
+  const [selectedResId, setSelectedResId] = useState<string>('');
   
   // Estados de datos
   const [loading, setLoading] = useState(true);
@@ -31,16 +60,32 @@ export default function ConfiguracionPage() {
       setRol(userRole);
 
       if (userRole === 'ADMIN' || userRole === 'SISADMIN') {
-        cargarConfiguracion();
+        init();
       }
     }
   }, []);
 
-  const cargarConfiguracion = async () => {
+  const init = async () => {
     setLoading(true);
+    try {
+      const userRole = localStorage.getItem('user_role');
+      if (userRole === 'SISADMIN') {
+        const list = await residencialApi.getResidenciales();
+        setResidenciales(list || []);
+      }
+      await cargarConfiguracion();
+    } catch (e) {
+      console.error("Error inicializando configuración:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cargarConfiguracion = async (overrideId?: string) => {
     try {
       const info = await residencialApi.getInfo();
       setResidencial(info);
+      setSelectedResId(info.id || '');
       setLatitud(info.latitud_centro?.toString() || '12.1364');
       setLongitud(info.longitud_centro?.toString() || '-86.2514');
       setZoom(info.zoom_defecto || 13);
@@ -51,9 +96,15 @@ export default function ConfiguracionPage() {
     } catch (err) {
       console.error("Error al cargar configuración:", err);
       setMensajeError("No se pudo cargar la configuración del residencial.");
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSelectResidencialChange = (newId: string) => {
+    setSelectedResId(newId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('residencial_id', newId);
+    }
+    cargarConfiguracion(newId);
   };
 
   const guardarConfiguracion = async (e: React.FormEvent) => {
@@ -69,13 +120,13 @@ export default function ConfiguracionPage() {
         zoom_defecto: Number(zoom),
         tolerancia_ronda_mins: Number(tolerancia),
         frecuencia_gps_seg: Number(frecuencia),
-        email_alerta_incidentes: emailAlertas,
-        telefono_emergencia: telEmergencia
+        email_alerta_incidentes: emailAlertas.trim(),
+        telefono_emergencia: telEmergencia.trim()
       });
 
-      setMensajeExito("¡Configuración del residencial actualizada correctamente!");
+      setMensajeExito("¡Configuración operativa y geográfica actualizada exitosamente!");
+      setTimeout(() => setMensajeExito(''), 4000);
       
-      // Actualizar info en local
       if (residencial) {
         setResidencial({
           ...residencial,
@@ -84,13 +135,13 @@ export default function ConfiguracionPage() {
           zoom_defecto: Number(zoom),
           tolerancia_ronda_mins: Number(tolerancia),
           frecuencia_gps_seg: Number(frecuencia),
-          email_alerta_incidentes: emailAlertas,
-          telefono_emergencia: telEmergencia
+          email_alerta_incidentes: emailAlertas.trim(),
+          telefono_emergencia: telEmergencia.trim()
         });
       }
     } catch (err: any) {
       console.error("Error guardando configuración:", err);
-      setMensajeError("Error al guardar la configuración: " + (err.response?.data || err.message));
+      setMensajeError("Error al guardar la configuración: " + (err.response?.data?.message || err.message));
     } finally {
       setCargandoGuardar(false);
     }
@@ -102,7 +153,7 @@ export default function ConfiguracionPage() {
         <AlertTriangle size={64} color="#ef4444" style={{ margin: '0 auto 1.5rem' }} />
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}>Acceso Restringido</h2>
         <p style={{ color: '#64748b' }}>
-          Esta pantalla de **Configuración** está restringida exclusivamente para usuarios con privilegios de Administrador.
+          La pantalla de <strong>Configuración</strong> está restringida exclusivamente para usuarios con privilegios de Administrador o Super Administrador.
         </p>
       </div>
     );
@@ -113,150 +164,175 @@ export default function ConfiguracionPage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#64748b' }}>
         <div style={{ width: '2.5rem', height: '2.5rem', border: '4px solid #f3f3f3', borderTop: '4px solid #FACC15', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <p style={{ marginTop: '1rem', fontWeight: '500' }}>Cargando parámetros del residencial...</p>
-        <style dangerouslySetInnerHTML={{__html: `
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}} />
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '2rem', color: '#1e293b', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', color: '#1e293b', maxWidth: '960px', margin: '0 auto' }}>
       
       {/* Encabezado */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', margin: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Settings color="#FACC15" size={32} />
-            Parámetros del Residencial
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', margin: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Settings color="#FACC15" size={30} />
+            Configuración Operativa del Residencial
           </h1>
-          <p style={{ color: '#64748b', marginTop: '0.5rem' }}>
-            Personaliza el comportamiento operativo, geográfico y de notificaciones para **{residencial?.nombre}**.
+          <p style={{ color: '#64748b', marginTop: '0.25rem', fontSize: '0.9rem' }}>
+            Ajuste de parámetros cartográficos, tiempos de tolerancia de rondas y canales de alerta.
           </p>
         </div>
+
+        {/* Selector de instalación para SISADMIN */}
+        {rol === 'SISADMIN' && residenciales.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0f172a', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #1e293b' }}>
+            <Building size={18} color="#FACC15" />
+            <select
+              value={selectedResId}
+              onChange={e => handleSelectResidencialChange(e.target.value)}
+              style={{ backgroundColor: 'transparent', color: '#ffffff', border: 'none', outline: 'none', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}
+            >
+              {residenciales.map(r => (
+                <option key={r.id} value={r.id} style={{ backgroundColor: '#0f172a' }}>
+                  {r.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Alertas */}
       {mensajeExito && (
-        <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', color: '#10b981', padding: '1rem', borderRadius: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+        <div style={{ backgroundColor: '#dcfce7', border: '1px solid #86efac', color: '#15803d', padding: '0.875rem 1.25rem', borderRadius: '0.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
           <CheckCircle size={20} style={{ flexShrink: 0 }} />
           <span>{mensajeExito}</span>
         </div>
       )}
 
       {mensajeError && (
-        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', padding: '1rem', borderRadius: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+        <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fca5a5', color: '#b91c1c', padding: '0.875rem 1.25rem', borderRadius: '0.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>
           <AlertTriangle size={20} style={{ flexShrink: 0 }} />
           <span>{mensajeError}</span>
         </div>
       )}
 
-      <form onSubmit={guardarConfiguracion} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <form onSubmit={guardarConfiguracion} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
         {/* Ficha General Informativa */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '1rem', padding: '1.5rem', color: 'white', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-          <div style={{ backgroundColor: '#1e293b', padding: '1rem', borderRadius: '50%' }}>
-            <Building color="#FACC15" size={32} />
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '1rem', padding: '1.5rem', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ backgroundColor: '#1e293b', padding: '1rem', borderRadius: '50%' }}>
+              <Building color="#FACC15" size={28} />
+            </div>
+            <div>
+              <span style={{ fontSize: '0.75rem', color: '#FACC15', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Instalación Activa</span>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 'bold', margin: '0.15rem 0' }}>{residencial?.nombre}</h2>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>Dirección: {residencial?.direccion || 'No registrada'}</p>
+            </div>
           </div>
-          <div>
-            <span style={{ fontSize: '0.75rem', color: '#FACC15', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Proyecto Activo</span>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: '0.15rem 0' }}>{residencial?.nombre}</h2>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>Dirección: {residencial?.direccion || 'No registrada'}</p>
-          </div>
+
+          <Link href="/map">
+            <button
+              type="button"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #334155', backgroundColor: '#1e293b', color: '#FACC15', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              <MapPin size={16} />
+              <span>Ver en Mapa</span>
+              <ExternalLink size={14} />
+            </button>
+          </Link>
         </div>
 
-        {/* Mallas de Configuración */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.5rem' }}>
+        {/* Tarjetas de Configuración */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
           
           {/* Tarjeta 1: Configuración de Mapas */}
-          <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
-              <Map size={20} color="#FACC15" />
-              Centro Geográfico y Zoom
+          <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 'bold', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+              <Map size={18} color="#FACC15" />
+              Centro Geográfico y Nivel de Zoom
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>Latitud Centro</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>Latitud Centro *</label>
                 <input
                   type="number" step="any" required value={latitud} onChange={e => setLatitud(e.target.value)}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>Longitud Centro</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>Longitud Centro *</label>
                 <input
                   type="number" step="any" required value={longitud} onChange={e => setLongitud(e.target.value)}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>Zoom por Defecto (1 - 22)</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>Zoom por Defecto (1 a 20) *</label>
                 <input
-                  type="number" min="1" max="22" required value={zoom} onChange={e => setZoom(Number(e.target.value))}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none' }}
+                  type="number" min="1" max="20" required value={zoom} onChange={e => setZoom(Number(e.target.value))}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none' }}
                 />
               </div>
             </div>
           </div>
 
           {/* Tarjeta 2: Reglas Operativas */}
-          <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
-              <Navigation size={20} color="#FACC15" />
-              Reglas del Servicio de Seguridad
+          <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 'bold', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+              <Navigation size={18} color="#FACC15" />
+              Reglas de Rondas y Geoposición
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>
-                  Tolerancia de Rondas (minutos)
-                  <span title="Minutos de retraso permitidos antes de marcar alerta de demora." style={{ display: 'inline-flex', cursor: 'help' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>
+                  Tolerancia de Ronda (minutos) *
+                  <span title="Minutos de gracia permitidos antes de clasificar la ronda como demorada." style={{ display: 'inline-flex', cursor: 'help' }}>
                     <HelpCircle size={14} color="#94a3b8" />
                   </span>
                 </label>
                 <input
                   type="number" min="1" required value={tolerancia} onChange={e => setTolerancia(Number(e.target.value))}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>
-                  Transmisión de GPS (segundos)
-                  <span title="Intervalo de envío de coordenadas por el dispositivo del guardia." style={{ display: 'inline-flex', cursor: 'help' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>
+                  Frecuencia de Baliza GPS (segundos) *
+                  <span title="Intervalo de envío automático de geolocalización desde el terminal del guardia." style={{ display: 'inline-flex', cursor: 'help' }}>
                     <HelpCircle size={14} color="#94a3b8" />
                   </span>
                 </label>
                 <input
                   type="number" min="5" required value={frecuencia} onChange={e => setFrecuencia(Number(e.target.value))}
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none' }}
                 />
               </div>
             </div>
           </div>
 
           {/* Tarjeta 3: Contacto y Alertas */}
-          <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', gridColumn: 'span 2' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
-              <Bell size={20} color="#FACC15" />
-              Notificaciones de Emergencia y Contacto
+          <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '1rem', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', gridColumn: 'span 2' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 'bold', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem' }}>
+              <Bell size={18} color="#FACC15" />
+              Canales de Alerta de Seguridad y Emergencias
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>Email de Reporte de Incidentes</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>Email de Reporte de Incidentes</label>
                 <input
                   type="email" value={emailAlertas} onChange={e => setEmailAlertas(e.target.value)}
-                  placeholder="ejemplo@residencial.com"
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none', boxSizing: 'border-box' }}
+                  placeholder="seguridad@residencial.com"
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', color: '#475569', marginBottom: '0.35rem' }}>Teléfono de Garita / Emergencias</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', color: '#475569', marginBottom: '0.25rem' }}>Teléfono Garita / Despacho Inmediato</label>
                 <input
                   type="text" value={telEmergencia} onChange={e => setTelEmergencia(e.target.value)}
-                  placeholder="+505 8888-8888"
-                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.5rem 0.75rem', outline: 'none', boxSizing: 'border-box' }}
+                  placeholder="+505 8888-0000"
+                  style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '0.5rem', padding: '0.65rem', outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -265,7 +341,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* Botón de Guardado */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
           <button
             type="submit"
             disabled={cargandoGuardar}
@@ -281,17 +357,39 @@ export default function ConfiguracionPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              boxShadow: '0 4px 6px -1px rgba(250, 204, 21, 0.2)',
-              opacity: cargandoGuardar ? 0.7 : 1,
-              transition: 'opacity 0.2s'
+              boxShadow: '0 4px 6px -1px rgba(250, 204, 21, 0.25)',
+              opacity: cargandoGuardar ? 0.7 : 1
             }}
           >
             <Save size={18} />
-            {cargandoGuardar ? "Guardando..." : "Guardar Cambios"}
+            {cargandoGuardar ? "Guardando..." : "Guardar Cambios de Configuración"}
           </button>
         </div>
 
       </form>
+
+      {/* Matriz de Seguridad y Roles del Sistema */}
+      <div style={{ marginTop: '2.5rem', backgroundColor: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: '0 0 0.5rem 0', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Shield size={20} color="#FACC15" />
+          Matriz de Privilegios y Roles RBAC NCS365
+        </h3>
+        <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 1.25rem 0' }}>
+          Arquitectura de seguridad basada en roles (RBAC) con aislamiento por fila multi-tenant.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+          {ROLES_MATRIZ.map(r => (
+            <div key={r.rol} style={{ border: '1px solid #f1f5f9', borderRadius: '0.5rem', padding: '0.85rem 1rem', backgroundColor: '#f8fafc' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 'bold', color: '#1e293b', fontSize: '0.9rem' }}>{r.rol}</span>
+                <span style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: '600' }}>{r.nivel}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>{r.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
     </div>
   );
