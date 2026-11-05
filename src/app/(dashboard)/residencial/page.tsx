@@ -22,7 +22,11 @@ import {
   KeyRound,
   FileText,
   UploadCloud,
-  Check
+  Check,
+  MapPin,
+  Settings,
+  ArrowRight,
+  Sliders
 } from 'lucide-react';
 import { 
   residencialApi, 
@@ -34,12 +38,33 @@ import {
 } from '@/lib/api';
 
 export default function ResidencialPage() {
-  const [activeTab, setActiveTab] = useState<'casas' | 'residentes' | 'instalaciones'>('casas');
+  const [activeTab, setActiveTab] = useState<'residenciales' | 'casas' | 'residentes'>('residenciales');
   const [userRole, setUserRole] = useState<string | null>(null);
 
   // Mensajes de Alerta
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // ==========================================
+  // ESTADOS: RESIDENCIALES / INSTALACIONES
+  // ==========================================
+  const [residenciales, setResidenciales] = useState<ResidencialInfo[]>([]);
+  const [selectedResidencialId, setSelectedResidencialId] = useState<string>('');
+  const [loadingInstalaciones, setLoadingInstalaciones] = useState(false);
+  const [showInstalacionForm, setShowInstalacionForm] = useState(false);
+  const [editingResidencial, setEditingResidencial] = useState<ResidencialInfo | null>(null);
+  const [nuevaInstalacion, setNuevaInstalacion] = useState<ResidencialInfo>({
+    id: '', 
+    nombre: '', 
+    direccion: '', 
+    latitud_centro: 12.1380, 
+    longitud_centro: -86.2784, 
+    zoom_defecto: 14,
+    telefono_emergencia: '',
+    email_alerta_incidentes: '',
+    tolerancia_ronda_mins: 15,
+    frecuencia_gps_seg: 10
+  });
 
   // Catálogo completo de casas para selectores
   const [todasLasCasas, setTodasLasCasas] = useState<Casa[]>([]);
@@ -106,16 +131,6 @@ export default function ResidencialPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ tipo: 'casa' | 'residente'; id: number; nombre: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ==========================================
-  // ESTADOS: INSTALACIONES (SOLO SISADMIN)
-  // ==========================================
-  const [instalaciones, setInstalaciones] = useState<ResidencialInfo[]>([]);
-  const [loadingInstalaciones, setLoadingInstalaciones] = useState(false);
-  const [showInstalacionForm, setShowInstalacionForm] = useState(false);
-  const [nuevaInstalacion, setNuevaInstalacion] = useState<ResidencialInfo>({
-    id: '', nombre: '', direccion: '', latitud_centro: 12.1364, longitud_centro: -86.2514, zoom_defecto: 13
-  });
-
   // Inicialización de Rol y Carga
   useEffect(() => {
     let role = localStorage.getItem('user_role');
@@ -138,8 +153,50 @@ export default function ResidencialPage() {
       }
     }
     setUserRole(role);
-    cargarCatalogoCasas();
+
+    const storedResId = localStorage.getItem('residencial_id') || '';
+    setSelectedResidencialId(storedResId);
+    fetchResidenciales(storedResId);
   }, []);
+
+  // Cargar lista completa de residenciales
+  const fetchResidenciales = async (currentResId?: string) => {
+    setLoadingInstalaciones(true);
+    try {
+      const data = await residencialApi.getResidenciales();
+      const list = data || [];
+      setResidenciales(list);
+
+      let targetId = currentResId || selectedResidencialId || localStorage.getItem('residencial_id') || '';
+      if ((!targetId || targetId === 'GLOBAL') && list.length > 0) {
+        targetId = list[0].id;
+      }
+      if (targetId && targetId !== 'GLOBAL') {
+        setSelectedResidencialId(targetId);
+        localStorage.setItem('residencial_id', targetId);
+      }
+
+      // Cargar casas y residentes para el residencial activo
+      cargarCatalogoCasas();
+      fetchCasasPaginadas();
+      fetchResidentesPaginados();
+    } catch (e) {
+      console.error('Error al obtener residenciales:', e);
+    } finally {
+      setLoadingInstalaciones(false);
+    }
+  };
+
+  // Cambio de Residencial Activo
+  const handleResidencialChange = (newId: string) => {
+    setSelectedResidencialId(newId);
+    localStorage.setItem('residencial_id', newId);
+    setPageCasa(1);
+    setPageResidente(1);
+    fetchCasasPaginadas();
+    cargarCatalogoCasas();
+    fetchResidentesPaginados();
+  };
 
   // Cargar catálogo de casas completas (para asignación)
   const cargarCatalogoCasas = async () => {
@@ -229,24 +286,12 @@ export default function ResidencialPage() {
     return () => clearTimeout(timer);
   }, [busquedaResidente]);
 
-  // Cargar Instalaciones (SISADMIN)
-  const fetchInstalaciones = async () => {
-    setLoadingInstalaciones(true);
-    try {
-      const data = await residencialApi.getResidenciales();
-      setInstalaciones(data || []);
-    } catch (e) {
-      console.error('Error al obtener instalaciones:', e);
-    } finally {
-      setLoadingInstalaciones(false);
-    }
-  };
-
+  // Cargar Residenciales al cambiar de pestaña
   useEffect(() => {
-    if (activeTab === 'instalaciones' && userRole === 'SISADMIN') {
-      fetchInstalaciones();
+    if (activeTab === 'residenciales') {
+      fetchResidenciales();
     }
-  }, [activeTab, userRole]);
+  }, [activeTab]);
 
   // ==========================================
   // HANDLERS: CASAS
@@ -411,41 +456,105 @@ export default function ResidencialPage() {
   };
 
   // ==========================================
-  // HANDLER: INSTALACIÓN (SISADMIN)
+  // HANDLERS: RESIDENCIALES / INSTALACIONES
   // ==========================================
-  const handleCreateInstalacion = async (e: React.FormEvent) => {
+  const handleOpenCreateResidencial = () => {
+    setEditingResidencial(null);
+    setNuevaInstalacion({
+      id: '',
+      nombre: '',
+      direccion: '',
+      latitud_centro: 12.1380,
+      longitud_centro: -86.2784,
+      zoom_defecto: 14,
+      telefono_emergencia: '',
+      email_alerta_incidentes: '',
+      tolerancia_ronda_mins: 15,
+      frecuencia_gps_seg: 10
+    });
+    setShowInstalacionForm(true);
+  };
+
+  const handleOpenEditResidencial = (r: ResidencialInfo) => {
+    setEditingResidencial(r);
+    setNuevaInstalacion({
+      id: r.id,
+      nombre: r.nombre,
+      direccion: r.direccion || '',
+      latitud_centro: r.latitud_centro || 12.1380,
+      longitud_centro: r.longitud_centro || -86.2784,
+      zoom_defecto: r.zoom_defecto || 14,
+      telefono_emergencia: r.telefono_emergencia || '',
+      email_alerta_incidentes: r.email_alerta_incidentes || '',
+      tolerancia_ronda_mins: r.tolerancia_ronda_mins || 15,
+      frecuencia_gps_seg: r.frecuencia_gps_seg || 10
+    });
+    setShowInstalacionForm(true);
+  };
+
+  const handleSaveInstalacion = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await residencialApi.createResidencial(nuevaInstalacion);
+      if (editingResidencial) {
+        await residencialApi.updateConfig(nuevaInstalacion, editingResidencial.id);
+        setSuccessMsg(`Residencial "${nuevaInstalacion.nombre}" actualizado exitosamente.`);
+      } else {
+        await residencialApi.createResidencial(nuevaInstalacion);
+        setSuccessMsg(`Residencial "${nuevaInstalacion.nombre}" registrado exitosamente.`);
+        if (!selectedResidencialId) {
+          handleResidencialChange(nuevaInstalacion.id);
+        }
+      }
       setShowInstalacionForm(false);
-      setNuevaInstalacion({ id: '', nombre: '', direccion: '', latitud_centro: 12.1364, longitud_centro: -86.2514, zoom_defecto: 13 });
-      fetchInstalaciones();
-      setSuccessMsg(`Instalación ${nuevaInstalacion.nombre} creada exitosamente.`);
+      setEditingResidencial(null);
+      fetchResidenciales();
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
-      setErrorMsg(err.response?.data || err.message || 'Error al registrar residencial.');
+      setErrorMsg(err.response?.data || err.message || 'Error al guardar el residencial.');
     }
   };
 
   // Obtener lista única de bloques para el filtro
   const listaBloques = Array.from(new Set(todasLasCasas.map(c => c.bloque).filter(Boolean)));
+  const selectedResidencial = residenciales.find(r => r.id === selectedResidencialId);
 
   return (
     <div style={{ maxWidth: '100%', width: '100%', minWidth: 0, boxSizing: 'border-box', color: '#1e293b' }}>
       
-      {/* Encabezado Principal y Pestañas */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+      {/* Encabezado Principal */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', margin: 0, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Home size={28} color="#FACC15" />
-            Gestión Residencial & Expediente de Casas
+            <Building size={28} color="#FACC15" />
+            Gestión Residencial & Urbanizaciones
           </h1>
           <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '0.35rem' }}>
-            Aislamiento estricto, prevención de duplicados, contratos de seguridad y relación 1:N de residentes a viviendas.
+            Administración centralizada de residenciales, condominios, catálogo de viviendas y directorio de habitantes.
           </p>
         </div>
 
         {/* Selector de Pestañas */}
         <div style={{ display: 'flex', gap: '0.35rem', backgroundColor: '#ffffff', padding: '0.25rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          <button
+            onClick={() => setActiveTab('residenciales')}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.375rem',
+              border: 'none',
+              backgroundColor: activeTab === 'residenciales' ? '#1e293b' : 'transparent',
+              color: activeTab === 'residenciales' ? '#FACC15' : '#64748b',
+              fontWeight: 'bold',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+          >
+            <Building size={16} />
+            <span>Residenciales ({residenciales.length})</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('casas')}
             style={{
@@ -463,7 +572,7 @@ export default function ResidencialPage() {
             }}
           >
             <Home size={16} />
-            <span>Casas / Viviendas ({totalCasas})</span>
+            <span>Casas / Lotes ({totalCasas})</span>
           </button>
 
           <button
@@ -485,29 +594,95 @@ export default function ResidencialPage() {
             <Users size={16} />
             <span>Directorio Residentes ({totalResidentes})</span>
           </button>
+        </div>
+      </div>
 
-          {userRole === 'SISADMIN' && (
-            <button
-              onClick={() => setActiveTab('instalaciones')}
+      {/* BARRA SUPERIOR DE RESIDENCIAL ACTIVO */}
+      <div style={{
+        backgroundColor: '#1e293b',
+        borderRadius: '0.75rem',
+        padding: '0.85rem 1.25rem',
+        marginBottom: '1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        border: '1px solid #334155',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '0.5rem', backgroundColor: 'rgba(250, 204, 21, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Building size={20} color="#FACC15" />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                Residencial Activo
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ffffff' }}>
+                {selectedResidencial?.nombre || selectedResidencialId || 'Ningún residencial seleccionado'}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Cambiar:</span>
+            <select
+              value={selectedResidencialId}
+              onChange={(e) => handleResidencialChange(e.target.value)}
               style={{
-                padding: '0.5rem 1rem',
+                padding: '0.45rem 0.75rem',
+                backgroundColor: '#0f172a',
+                border: '1px solid #475569',
                 borderRadius: '0.375rem',
-                border: 'none',
-                backgroundColor: activeTab === 'instalaciones' ? '#1e293b' : 'transparent',
-                color: activeTab === 'instalaciones' ? '#FACC15' : '#64748b',
-                fontWeight: 'bold',
+                color: '#f8fafc',
                 fontSize: '0.85rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem'
+                fontWeight: '600',
+                cursor: 'pointer'
               }}
             >
-              <Building size={16} />
-              <span>Instalaciones</span>
-            </button>
+              {residenciales.map(r => (
+                <option key={r.id} value={r.id}>{r.nombre} ({r.id})</option>
+              ))}
+              {residenciales.length === 0 && (
+                <option value="">Sin residenciales</option>
+              )}
+            </select>
+          </div>
+
+          {selectedResidencial && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+              <span style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                🏠 <strong>{totalCasas}</strong> Casas
+              </span>
+              <span style={{ backgroundColor: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                👥 <strong>{totalResidentes}</strong> Habitantes
+              </span>
+            </div>
           )}
         </div>
+
+        <button
+          onClick={handleOpenCreateResidencial}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.55rem 1rem',
+            backgroundColor: '#FACC15',
+            color: '#1e293b',
+            border: 'none',
+            borderRadius: '0.5rem',
+            fontWeight: 'bold',
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+          }}
+        >
+          <Plus size={16} />
+          <span>Nuevo Residencial</span>
+        </button>
       </div>
 
       {/* Banners de Notificaciones Globales */}
@@ -1019,39 +1194,256 @@ export default function ResidencialPage() {
       )}
 
       {/* ======================================================== */}
-      {/* PESTAÑA 3: INSTALACIONES (SOLO SISADMIN) */}
+      {/* PESTAÑA 1: RESIDENCIALES / URBANIZACIONES */}
       {/* ======================================================== */}
-      {activeTab === 'instalaciones' && userRole === 'SISADMIN' && (
+      {activeTab === 'residenciales' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          
+          {/* Cabecera de la sección Residenciales */}
+          <div style={{
+            backgroundColor: '#ffffff',
+            padding: '1rem 1.25rem',
+            borderRadius: '0.75rem',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 'bold', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Building size={20} color="#FACC15" />
+                Catálogo de Residenciales y Urbanizaciones
+              </h2>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.825rem', color: '#64748b' }}>
+                Selecciona la urbanización activa para consultar y operar sus viviendas, residentes, mapas y rondas.
+              </p>
+            </div>
+
             <button
-              onClick={() => setShowInstalacionForm(true)}
+              onClick={handleOpenCreateResidencial}
               style={{
-                display: 'flex', alignItems: 'center', gap: '0.4rem',
-                padding: '0.65rem 1.25rem', backgroundColor: '#FACC15', color: '#1e293b',
-                border: 'none', borderRadius: '0.5rem', fontWeight: 'bold',
-                cursor: 'pointer', fontSize: '0.85rem'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.6rem 1.15rem',
+                backgroundColor: '#FACC15',
+                color: '#1e293b',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
               }}
             >
-              <Plus size={18} /> Registrar Nueva Instalación
+              <Plus size={18} />
+              <span>Registrar Residencial</span>
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-            {instalaciones.map((inst) => (
-              <div key={inst.id} style={{ backgroundColor: '#fff', padding: '1.25rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <Building size={20} color="#0284c7" />
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 'bold', color: '#1e293b' }}>{inst.nombre}</h3>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem' }}>ID: <span style={{ fontFamily: 'monospace' }}>{inst.id}</span></div>
-                <div style={{ fontSize: '0.825rem', color: '#475569' }}>{inst.direccion || 'Sin dirección registrada'}</div>
-                <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: '#64748b' }}>
-                  Coordenadas: {inst.latitud_centro}, {inst.longitud_centro} (Zoom {inst.zoom_defecto})
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Grilla de Residenciales */}
+          {loadingInstalaciones ? (
+            <div style={{ backgroundColor: '#fff', padding: '4rem', textAlign: 'center', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
+              <div style={{ width: '2rem', height: '2rem', border: '3px solid #f3f3f3', borderTop: '3px solid #FACC15', borderRadius: '50%', margin: '0 auto 1rem', animation: 'spin 1s linear infinite' }} />
+              <p style={{ margin: 0, color: '#64748b' }}>Cargando catálogo de residenciales...</p>
+            </div>
+          ) : residenciales.length === 0 ? (
+            <div style={{ backgroundColor: '#fff', padding: '4rem 2rem', textAlign: 'center', borderRadius: '0.75rem', border: '1px solid #e2e8f0', color: '#64748b' }}>
+              <Building size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+              <h3 style={{ margin: '0 0 0.5rem', color: '#334155', fontWeight: 'bold' }}>No hay residenciales registrados</h3>
+              <p style={{ margin: '0 0 1.25rem', fontSize: '0.875rem' }}>Empieza dando de alta la primera urbanización para habilitar el registro de viviendas y control perimetral.</p>
+              <button
+                onClick={handleOpenCreateResidencial}
+                style={{
+                  padding: '0.65rem 1.25rem',
+                  backgroundColor: '#1e293b',
+                  color: '#FACC15',
+                  border: '1px solid #FACC15',
+                  borderRadius: '0.5rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                + Registrar Primer Residencial
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.25rem' }}>
+              {residenciales.map((inst) => {
+                const esActivo = inst.id === selectedResidencialId;
+
+                return (
+                  <div
+                    key={inst.id}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: '0.75rem',
+                      border: esActivo ? '2px solid #FACC15' : '1px solid #e2e8f0',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: esActivo ? '0 4px 12px rgba(250, 204, 21, 0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                      position: 'relative'
+                    }}
+                  >
+                    <div>
+                      {/* Cabecera Tarjeta */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '0.5rem',
+                            backgroundColor: esActivo ? '#1e293b' : '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <Building size={20} color={esActivo ? '#FACC15' : '#475569'} />
+                          </div>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 'bold', color: '#1e293b' }}>
+                              {inst.nombre}
+                            </h3>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                              Código ID: <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#0369a1' }}>{inst.id}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {esActivo && (
+                          <span style={{
+                            padding: '0.25rem 0.65rem',
+                            backgroundColor: '#1e293b',
+                            color: '#FACC15',
+                            borderRadius: '1rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            border: '1px solid #FACC15',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}>
+                            <Check size={12} /> ACTIVO
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Dirección */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem', fontSize: '0.825rem', color: '#475569', marginBottom: '0.75rem' }}>
+                        <MapPin size={15} color="#94a3b8" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span>{inst.direccion || 'Sin dirección física registrada'}</span>
+                      </div>
+
+                      {/* Contacto / Garita */}
+                      {(inst.telefono_emergencia || inst.email_alerta_incidentes) && (
+                        <div style={{ backgroundColor: '#f8fafc', padding: '0.6rem 0.75rem', borderRadius: '0.5rem', marginBottom: '0.75rem', border: '1px solid #e2e8f0', fontSize: '0.78rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          {inst.telefono_emergencia && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <Phone size={13} color="#ca8a04" />
+                              <span>Garita / Emergencia: <strong>{inst.telefono_emergencia}</strong></span>
+                            </div>
+                          )}
+                          {inst.email_alerta_incidentes && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <Mail size={13} color="#2563eb" />
+                              <span>Alertas: <strong>{inst.email_alerta_incidentes}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Coordenadas de Mapa */}
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
+                        <span style={{ backgroundColor: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '0.35rem', fontFamily: 'monospace' }}>
+                          📍 Lat: {inst.latitud_centro?.toFixed(4) || '12.1380'}, Lng: {inst.longitud_centro?.toFixed(4) || '-86.2784'}
+                        </span>
+                        <span style={{ backgroundColor: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '0.35rem' }}>
+                          Zoom: {inst.zoom_defecto || 14}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Botonera de la tarjeta */}
+                    <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.85rem' }}>
+                      {!esActivo ? (
+                        <button
+                          onClick={() => {
+                            handleResidencialChange(inst.id);
+                            setSuccessMsg(`Residencial "${inst.nombre}" seleccionado como activo.`);
+                            setTimeout(() => setSuccessMsg(''), 3000);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#1e293b',
+                            color: '#FACC15',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            fontWeight: 'bold',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <Check size={14} /> Seleccionar como Activo
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setActiveTab('casas')}
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#FACC15',
+                            color: '#1e293b',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            fontWeight: 'bold',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <Home size={14} /> Ver Casas ({totalCasas})
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleOpenEditResidencial(inst)}
+                        style={{
+                          padding: '0.5rem 0.75rem',
+                          backgroundColor: '#f1f5f9',
+                          color: '#334155',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '0.375rem',
+                          fontWeight: '600',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
+                        }}
+                        title="Configurar coordenadas y datos"
+                      >
+                        <Settings size={14} /> Configurar
+                      </button>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         </div>
       )}
 
@@ -1078,6 +1470,14 @@ export default function ResidencialPage() {
                 <span>{casaModalError}</span>
               </div>
             )}
+
+            {/* Indicador de Residencial Asignado */}
+            <div style={{ backgroundColor: '#f8fafc', padding: '0.6rem 0.85rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Building size={16} color="#ca8a04" />
+              <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                Residencial Asignado: <strong style={{ color: '#1e293b' }}>{selectedResidencial?.nombre || selectedResidencialId || 'Residencial Activo'}</strong>
+              </div>
+            </div>
 
             <form onSubmit={handleSaveCasa} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
@@ -1459,36 +1859,49 @@ export default function ResidencialPage() {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL CREAR INSTALACIÓN (SISADMIN) */}
+      {/* MODAL CREAR / CONFIGURAR RESIDENCIAL */}
       {/* ======================================================== */}
       {showInstalacionForm && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1rem', width: '100%', maxWidth: '440px', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1rem', width: '100%', maxWidth: '520px', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxHeight: '90vh', overflowY: 'auto' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>Registrar Instalación Residencial</h3>
-              <button onClick={() => setShowInstalacionForm(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={20} /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Building size={22} color="#FACC15" />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: 0, color: '#1e293b' }}>
+                  {editingResidencial ? `Configurar: ${editingResidencial.nombre}` : 'Registrar Nuevo Residencial'}
+                </h3>
+              </div>
+              <button onClick={() => { setShowInstalacionForm(false); setEditingResidencial(null); }} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleCreateInstalacion} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleSaveInstalacion} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>Código Único del Residencial *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>
+                  Código Único del Residencial *
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="ej. colinas_ncs"
+                  disabled={!!editingResidencial}
+                  placeholder="ej. las_colinas, santa_elena, residencial_doral"
                   value={nuevaInstalacion.id}
-                  onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, id: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
-                  style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, id: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_') })}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box', backgroundColor: editingResidencial ? '#f1f5f9' : '#fff' }}
                 />
+                <span style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '0.2rem', display: 'block' }}>
+                  Identificador alfanumérico interno para aislamiento multi-tenant.
+                </span>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>Nombre Comercial *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>
+                  Nombre Comercial / Oficial *
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="ej. Residencial Las Colinas"
+                  placeholder="ej. Residencial Las Colinas, Condominio San Patricio"
                   value={nuevaInstalacion.nombre}
                   onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, nombre: e.target.value })}
                   style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
@@ -1496,19 +1909,133 @@ export default function ResidencialPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>Dirección</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>
+                  Dirección Física / Ciudad
+                </label>
                 <input
                   type="text"
-                  placeholder="Dirección física o ciudad"
+                  placeholder="ej. Km 12 Carretera a Masaya, Managua"
                   value={nuevaInstalacion.direccion}
                   onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, direccion: e.target.value })}
                   style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="button" onClick={() => setShowInstalacionForm(false)} style={{ padding: '0.55rem 1rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '0.55rem 1.25rem', borderRadius: '0.375rem', border: 'none', backgroundColor: '#FACC15', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer' }}>Crear Residencial</button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>
+                    Teléfono Garita / Emergencia
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ej. +505 2255-0000"
+                    value={nuevaInstalacion.telefono_emergencia || ''}
+                    onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, telefono_emergencia: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', marginBottom: '0.35rem' }}>
+                    Email de Alertas
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="seguridad@residencial.com"
+                    value={nuevaInstalacion.email_alerta_incidentes || ''}
+                    onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, email_alerta_incidentes: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem 0.75rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              {/* Coordenadas Geográficas para el Mapa */}
+              <div style={{ backgroundColor: '#f8fafc', padding: '0.85rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <MapPin size={15} color="#ca8a04" />
+                  <span>Configuración del Mapa Satelital</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.725rem', color: '#64748b', marginBottom: '0.2rem' }}>Latitud Centro</label>
+                    <input
+                      type="number"
+                      step="0.00001"
+                      required
+                      value={nuevaInstalacion.latitud_centro}
+                      onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, latitud_centro: parseFloat(e.target.value) || 12.1380 })}
+                      style={{ width: '100%', padding: '0.45rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.725rem', color: '#64748b', marginBottom: '0.2rem' }}>Longitud Centro</label>
+                    <input
+                      type="number"
+                      step="0.00001"
+                      required
+                      value={nuevaInstalacion.longitud_centro}
+                      onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, longitud_centro: parseFloat(e.target.value) || -86.2784 })}
+                      style={{ width: '100%', padding: '0.45rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.725rem', color: '#64748b', marginBottom: '0.2rem' }}>Zoom (10-18)</label>
+                    <input
+                      type="number"
+                      min="10"
+                      max="20"
+                      required
+                      value={nuevaInstalacion.zoom_defecto}
+                      onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, zoom_defecto: parseInt(e.target.value, 10) || 14 })}
+                      style={{ width: '100%', padding: '0.45rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Parámetros Operativos */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.2rem' }}>Tolerancia Rondas (min)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="120"
+                    value={nuevaInstalacion.tolerancia_ronda_mins || 15}
+                    onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, tolerancia_ronda_mins: parseInt(e.target.value, 10) || 15 })}
+                    style={{ width: '100%', padding: '0.45rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.2rem' }}>Frecuencia GPS (seg)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="60"
+                    value={nuevaInstalacion.frecuencia_gps_seg || 10}
+                    onChange={(e) => setNuevaInstalacion({ ...nuevaInstalacion, frecuencia_gps_seg: parseInt(e.target.value, 10) || 10 })}
+                    style={{ width: '100%', padding: '0.45rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', fontSize: '0.8rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowInstalacionForm(false); setEditingResidencial(null); }}
+                  style={{ padding: '0.55rem 1rem', borderRadius: '0.375rem', border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '0.55rem 1.25rem', borderRadius: '0.375rem', border: 'none', backgroundColor: '#FACC15', color: '#1e293b', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
+                >
+                  {editingResidencial ? 'Guardar Cambios' : 'Crear Residencial'}
+                </button>
               </div>
             </form>
 
