@@ -36,7 +36,13 @@ export default function OperativeMapPage() {
     setSelectedResidencialId(resId);
 
     if (role === 'SISADMIN') {
-      residencialApi.getResidenciales().then(list => setResidenciales(list || [])).catch(() => {});
+      residencialApi.getResidenciales().then(list => {
+        setResidenciales(list || []);
+        if (!resId && list && list.length > 0) {
+          setSelectedResidencialId(list[0].id);
+          localStorage.setItem('residencial_id', list[0].id);
+        }
+      }).catch(() => {});
     }
   }, []);
 
@@ -112,17 +118,17 @@ export default function OperativeMapPage() {
     }
     setCargandoHistorial(true);
     try {
-      // Convertir hora local del usuario a UTC para coincidir con la base de datos
+      // Convertir hora local del usuario a UTC en formato ISO 8601 estándar (ej. 2026-11-04T21:00:00.000Z)
       const localInicio = new Date(`${fechaInicio}T${horaInicio || '00:00'}:00`);
       const localFin = new Date(`${fechaFin}T${horaFin || '23:59'}:59`);
       
       const fInicio = !isNaN(localInicio.getTime())
-        ? localInicio.toISOString().replace('T', ' ').substring(0, 19)
-        : `${fechaInicio} ${horaInicio || '00:00'}:00`;
+        ? localInicio.toISOString()
+        : `${fechaInicio}T${horaInicio || '00:00'}:00Z`;
 
       const fFin = !isNaN(localFin.getTime())
-        ? localFin.toISOString().replace('T', ' ').substring(0, 19)
-        : `${fechaFin} ${horaFin || '23:59'}:59`;
+        ? localFin.toISOString()
+        : `${fechaFin}T${horaFin || '23:59'}:59Z`;
 
       const data = await trackingApi.getHistorial(parseInt(guardiaSeleccionado || '0'), fInicio, fFin);
       setHistorial(data || []);
@@ -172,6 +178,7 @@ export default function OperativeMapPage() {
                 onChange={(e) => handleResidencialChange(e.target.value)}
                 style={{ width: '100%', padding: '0.4rem', backgroundColor: '#0f172a', color: '#ffffff', border: '1px solid #475569', borderRadius: '0.375rem', fontSize: '0.8125rem' }}
               >
+                <option value="GLOBAL">🌐 Todos los Residenciales (Global)</option>
                 {residenciales.map(r => (
                   <option key={r.id} value={r.id}>{r.nombre}</option>
                 ))}
