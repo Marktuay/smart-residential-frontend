@@ -20,6 +20,7 @@ import {
   Bell,
   Navigation,
   Truck,
+  Bot,
   X
 } from 'lucide-react';
 
@@ -95,6 +96,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <Link href="/"><span style={{ fontSize: '0.85rem', color: isActive('/') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Resumen General</span></Link>
           <Link href="/map"><span style={{ fontSize: '0.85rem', color: isActive('/map') ? 'var(--primary)' : 'var(--text-sidebar)' }}>Mapa Operativo</span></Link>
         </div>
+
+        {/* Módulo Centinela Autónomo: Hermes Sentinel */}
+        <Link href="/hermes" style={{ textDecoration: 'none' }}>
+          <div className={`sidebar-item ${isActive('/hermes')}`} style={{
+            margin: '0.35rem 0.5rem',
+            padding: '0.55rem 0.75rem',
+            borderRadius: '0.5rem',
+            backgroundColor: isActive('/hermes') ? 'rgba(250, 204, 21, 0.15)' : 'rgba(15, 23, 42, 0.6)',
+            border: isActive('/hermes') ? '1px solid #FACC15' : '1px solid rgba(250, 204, 21, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <Bot size={18} color="#FACC15" />
+              <span style={{ fontWeight: '600', fontSize: '0.85rem', color: '#f8fafc' }}>Hermes Sentinel</span>
+            </div>
+            <span style={{
+              fontSize: '0.6rem',
+              fontWeight: 'bold',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              padding: '0.12rem 0.35rem',
+              borderRadius: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem'
+            }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ffffff' }} />
+              IA
+            </span>
+          </div>
+        </Link>
 
         <div className="sidebar-section-title">Operaciones</div>
         <Link href="/operativo">

@@ -765,3 +765,86 @@ export const auditoriaApi = {
     return response.data;
   }
 };
+
+// --- Módulo Hermes Sentinel: Agente Controlador y Administrador ---
+
+export interface HermesConfig {
+  id: number;
+  residencial_id: string;
+  activo: boolean;
+  intervalo_evaluacion_seg: number;
+  max_inactividad_gps_mins: number;
+  alerta_sos_activa: boolean;
+  alerta_rondas_retraso: boolean;
+  alerta_flota_desvios: boolean;
+  webhook_notificacion: string;
+  gemini_api_key?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HermesAlerta {
+  id: number;
+  residencial_id: string;
+  tipo_evento: string; // INACTIVIDAD_GPS, BOTON_PANICO_SOS, RONDA_VENCIDA, INCIDENTE_CRITICO, FLOTA_ANOMALIA
+  severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA';
+  titulo: string;
+  descripcion: string;
+  metadata_json: string;
+  estado: 'PENDIENTE' | 'NOTIFICADO' | 'ATENDIDO' | 'DESCARTADO';
+  atendido_por?: string;
+  fecha_creacion: string;
+  fecha_resolucion?: string;
+}
+
+export interface HermesStatus {
+  activo: boolean;
+  version: string;
+  ultima_evaluacion: string;
+  total_alertas_pendientes: number;
+  total_alertas_criticas: number;
+  residenciales_monitoreados: number;
+  uptime_segundos: number;
+  mensaje: string;
+}
+
+export interface HermesChatResponse {
+  respuesta: string;
+  fuente: 'GEMINI_AI' | 'HERMES_ANALYTICS';
+  fecha: string;
+  contexto?: Record<string, any>;
+}
+
+export const hermesApi = {
+  getStatus: async (): Promise<HermesStatus> => {
+    const response = await api.get('/hermes/status');
+    return response.data;
+  },
+  getAlertas: async (estado?: string, severidad?: string, residencialId?: string): Promise<HermesAlerta[]> => {
+    const params: Record<string, string> = {};
+    if (estado && estado !== 'TODOS') params.estado = estado;
+    if (severidad && severidad !== 'TODAS') params.severidad = severidad;
+    if (residencialId && residencialId !== 'GLOBAL' && residencialId !== 'TODOS') params.residencial_id = residencialId;
+    const response = await api.get('/hermes/alertas', { params });
+    return response.data;
+  },
+  resolverAlerta: async (id: number, estado: 'ATENDIDO' | 'DESCARTADO', comentario?: string, atendidoPor?: string): Promise<void> => {
+    await api.put(`/hermes/alertas/${id}/resolver`, { estado, comentario, atendido_por: atendidoPor });
+  },
+  getConfig: async (): Promise<HermesConfig> => {
+    const response = await api.get('/hermes/config');
+    return response.data;
+  },
+  updateConfig: async (config: Partial<HermesConfig>): Promise<HermesConfig> => {
+    const response = await api.put('/hermes/config', config);
+    return response.data;
+  },
+  evaluarAhora: async (): Promise<{ mensaje: string; status: HermesStatus }> => {
+    const response = await api.post('/hermes/evaluar');
+    return response.data;
+  },
+  enviarMensaje: async (mensaje: string): Promise<HermesChatResponse> => {
+    const response = await api.post('/hermes/chat', { mensaje });
+    return response.data;
+  }
+};

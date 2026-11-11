@@ -20,7 +20,8 @@ import {
   Truck, 
   MapPin,
   Calendar,
-  Radio
+  Radio,
+  Bot
 } from 'lucide-react';
 import { incidentesApi, Incidente } from '@/lib/api';
 
@@ -44,6 +45,7 @@ const RUTAS_SISTEMA = [
   { titulo: 'Control de Flota y Maquinaria Pesada', ruta: '/flota', modulo: 'Flota 360', icono: Truck },
   { titulo: 'Terminal Checklist 360 (Inspección)', ruta: '/flota/inspeccion', modulo: 'Flota 360', icono: Truck },
   { titulo: 'Catálogo de Unidades Pesadas', ruta: '/flota/vehiculos', modulo: 'Flota 360', icono: Truck },
+  { titulo: 'Hermes Sentinel IA (Control y Auditoría)', ruta: '/hermes', modulo: 'Control Inteligente', icono: Bot },
   { titulo: 'Configuración del Residencial', ruta: '/configuracion', modulo: 'Ajustes', icono: Settings },
   { titulo: 'Bitácora Inmutable de Auditoría', ruta: '/auditoria', modulo: 'Seguridad', icono: Shield },
   { titulo: 'Emisión de Alertas Push', ruta: '/notificar', modulo: 'Comunicaciones', icono: Bell }
@@ -171,6 +173,35 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         
         <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           
+          {/* PILL INDICADOR: HERMES SENTINEL IA */}
+          <Link href="/hermes" style={{ textDecoration: 'none' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              backgroundColor: '#0f172a',
+              border: '1px solid rgba(250, 204, 21, 0.4)',
+              padding: '0.35rem 0.65rem',
+              borderRadius: '2rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+              transition: 'transform 0.15s ease'
+            }} title="Hermes Sentinel: Agente Controlador y Administrador IA">
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#10b981',
+                display: 'inline-block',
+                boxShadow: '0 0 6px #10b981'
+              }} />
+              <Bot size={15} color="#FACC15" />
+              <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#f8fafc', letterSpacing: '0.3px' }}>
+                Hermes IA
+              </span>
+            </div>
+          </Link>
+
           {/* BOTÓN 1: BÚSQUEDA RÁPIDA (LUPA) */}
           <button 
             className="header-icon-btn"
