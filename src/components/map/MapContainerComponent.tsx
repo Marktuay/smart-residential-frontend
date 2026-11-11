@@ -1,10 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Ubicacion, HistorialUbicacion, PuntoQR } from '@/lib/api';
 import L from 'leaflet';
+
+function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Radio de la Tierra en metros
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const getNombreFromEmail = (email?: string, id?: number) => {
   if (!email) return `Guardia #${id || ''}`;
@@ -96,6 +110,51 @@ export default function MapContainerComponent({ guardiasActivos, historial, most
 
   const polylinePositions = historial.map(h => [h.latitud, h.longitud] as [number, number]);
 
+  // Segmentación inteligente de la ruta:
+  // Si entre dos puntos consecutivos hay más de 2.5 minutos de diferencia o un salto > 200m sin puntos intermedios,
+  // se divide en un nuevo segmento para no dibujar líneas falsas atravesando muros o casas.
+  const { segmentosRuta, brechasDesconexion } = useMemo(() => {
+    if (!historial || historial.length === 0) {
+      return { segmentosRuta: [] as [number, number][][], brechasDesconexion: [] as { desde: [number, number]; hasta: [number, number]; minutos: number; distanciaM: number }[] };
+    }
+
+    const segmentos: [number, number][][] = [];
+    const brechas: { desde: [number, number]; hasta: [number, number]; minutos: number; distanciaM: number }[] = [];
+    let segmentoActual: [number, number][] = [[historial[0].latitud, historial[0].longitud]];
+
+    for (let i = 1; i < historial.length; i++) {
+      const prev = historial[i - 1];
+      const curr = historial[i];
+
+      const prevTime = new Date(prev.registrado_en).getTime();
+      const currTime = new Date(curr.registrado_en).getTime();
+      const diffMins = Math.abs(currTime - prevTime) / (1000 * 60);
+      const distM = getDistanceMeters(prev.latitud, prev.longitud, curr.latitud, curr.longitud);
+
+      // Si pasaron más de 2.5 minutos o hubo un salto de más de 200m con brecha de tiempo > 1 min
+      if (diffMins > 2.5 || (distM > 200 && diffMins > 1.0)) {
+        if (segmentoActual.length > 0) {
+          segmentos.push(segmentoActual);
+        }
+        segmentoActual = [[curr.latitud, curr.longitud]];
+        brechas.push({
+          desde: [prev.latitud, prev.longitud],
+          hasta: [curr.latitud, curr.longitud],
+          minutos: Math.round(diffMins),
+          distanciaM: Math.round(distM),
+        });
+      } else {
+        segmentoActual.push([curr.latitud, curr.longitud]);
+      }
+    }
+
+    if (segmentoActual.length > 0) {
+      segmentos.push(segmentoActual);
+    }
+
+    return { segmentosRuta: segmentos, brechasDesconexion: brechas };
+  }, [historial]);
+
   const horaInicioStr = historial.length > 0 && historial[0].registrado_en
     ? new Date(historial[0].registrado_en).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
@@ -180,9 +239,25 @@ export default function MapContainerComponent({ guardiasActivos, historial, most
 
       {mostrarHistorial && polylinePositions.length > 0 && (
         <>
-          {/* Línea de patrullaje trazada en el mapa */}
-          <Polyline positions={polylinePositions} color="#2563EB" weight={6} opacity={0.8} />
-          <Polyline positions={polylinePositions} color="#FACC15" weight={3} dashArray="8, 8" />
+          {/* Segmentos continuos de patrullaje (sin cortar paredes ni trazos irreales) */}
+          {segmentosRuta.map((seg, sIdx) => (
+            <React.Fragment key={`seg-${sIdx}`}>
+              <Polyline positions={seg} color="#2563EB" weight={6} opacity={0.85} />
+              <Polyline positions={seg} color="#FACC15" weight={3} dashArray="8, 8" />
+            </React.Fragment>
+          ))}
+
+          {/* Brechas de señal satelital o celular suspendido (línea delgada discontinua de advertencia) */}
+          {brechasDesconexion.map((b, bIdx) => (
+            <Polyline
+              key={`gap-${bIdx}`}
+              positions={[b.desde, b.hasta]}
+              color="#EF4444"
+              weight={2}
+              dashArray="4, 8"
+              opacity={0.65}
+            />
+          ))}
 
           {/* Marcadores individuales por punto con hora exacta al hacer clic */}
           {historial.map((pt, idx) => (
