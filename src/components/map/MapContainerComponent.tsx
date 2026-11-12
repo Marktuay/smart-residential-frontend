@@ -28,13 +28,22 @@ const getNombreFromEmail = (email?: string, id?: number) => {
     .replace(/\b\w/g, c => c.toUpperCase());
 };
 
+const escapeHtml = (unsafe: string) =>
+  String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
 const createCustomGuardIcon = (nombre: string) => {
+  const safeNombre = escapeHtml(nombre);
   return L.divIcon({
     className: 'custom-guard-pin',
     html: `
       <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; position: relative;">
         <div style="background-color: #0F172A; color: #FACC15; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 12px; border: 1.5px solid #FACC15; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.4); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-          <span>👮‍♂️</span> <span>${nombre}</span>
+          <span>👮‍♂️</span> <span>${safeNombre}</span>
         </div>
         <div style="width: 26px; height: 26px; background-color: #2563EB; border: 2.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
           <div style="width: 10px; height: 10px; background-color: #10B981; border-radius: 50%;"></div>
@@ -50,13 +59,14 @@ const createCustomGuardIcon = (nombre: string) => {
 const createCheckpointIcon = (nombre: string, hasContract: boolean, isHouse: boolean) => {
   const bg = isHouse ? (hasContract ? '#16A34A' : '#CA8A04') : '#2563EB';
   const iconSymbol = isHouse ? (hasContract ? '🛡️' : '🏠') : '📍';
+  const safeNombre = escapeHtml(nombre);
 
   return L.divIcon({
     className: 'custom-checkpoint-pin',
     html: `
       <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; position: relative;">
         <div style="background-color: #0F172A; color: #FFFFFF; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 8px; border: 1px solid ${bg}; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3); margin-bottom: 2px; display: flex; align-items: center; gap: 3px;">
-          <span>${iconSymbol}</span> <span>${nombre}</span>
+          <span>${iconSymbol}</span> <span>${safeNombre}</span>
         </div>
         <div style="width: 14px; height: 14px; background-color: ${bg}; border: 2px solid #FFFFFF; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"></div>
       </div>
@@ -67,12 +77,14 @@ const createCheckpointIcon = (nombre: string, hasContract: boolean, isHouse: boo
 };
 
 const createWaypointIcon = (label: string, time: string, color: string) => {
+  const safeLabel = escapeHtml(label);
+  const safeTime = escapeHtml(time);
   return L.divIcon({
     className: 'custom-waypoint-pin',
     html: `
       <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); z-index: 1000;">
         <div style="background-color: #0F172A; color: #FFFFFF; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 8px; border: 1.5px solid ${color}; white-space: nowrap; box-shadow: 0 3px 8px rgba(0,0,0,0.4); margin-bottom: 2px;">
-          ${label} (${time})
+          ${safeLabel} (${safeTime})
         </div>
         <div style="width: 18px; height: 18px; background-color: ${color}; border: 2.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"></div>
       </div>
