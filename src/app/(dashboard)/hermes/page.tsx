@@ -574,7 +574,8 @@ export default function HermesSentinelPage() {
                 '🚛 Reporte de flota pesada y maquinaria 360',
                 '🚪 ¿Cuántas visitas han ingresado a garita?',
                 '🚨 ¿Hay alguna novedad o emergencia hoy?',
-                '🏡 Censo de viviendas y cobertura de seguridad'
+                '🏡 Censo de viviendas y cobertura de seguridad',
+                '📖 Guía de uso del sistema'
               ].map((sugerencia, idx) => (
                 <button
                   key={idx}
