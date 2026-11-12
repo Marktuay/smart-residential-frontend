@@ -77,12 +77,16 @@ export default function HermesSentinelPage() {
 
     const horaActual = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const nuevoMensajeUsuario = { sender: 'user' as const, text: texto, time: horaActual };
+    const historialParaEnviar = chatMessages.slice(-10).map(m => ({
+      role: (m.sender === 'user' ? 'user' : 'model') as 'user' | 'model',
+      text: m.text
+    }));
     setChatMessages(prev => [...prev, nuevoMensajeUsuario]);
     setInputMsg('');
     setSendingMsg(true);
 
     try {
-      const resp = await hermesApi.enviarMensaje(texto);
+      const resp = await hermesApi.enviarMensaje(texto, historialParaEnviar, '/hermes');
       setChatMessages(prev => [
         ...prev,
         {

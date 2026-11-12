@@ -808,6 +808,11 @@ export interface HermesStatus {
   mensaje: string;
 }
 
+export interface HermesChatHistoryItem {
+  role: 'user' | 'model';
+  text: string;
+}
+
 export interface HermesChatResponse {
   respuesta: string;
   fuente: 'GEMINI_AI' | 'HERMES_ANALYTICS';
@@ -843,8 +848,16 @@ export const hermesApi = {
     const response = await api.post('/hermes/evaluar');
     return response.data;
   },
-  enviarMensaje: async (mensaje: string): Promise<HermesChatResponse> => {
-    const response = await api.post('/hermes/chat', { mensaje });
+  enviarMensaje: async (
+    mensaje: string,
+    historial?: HermesChatHistoryItem[],
+    rutaActual?: string
+  ): Promise<HermesChatResponse> => {
+    const response = await api.post('/hermes/chat', {
+      mensaje,
+      historial,
+      ruta_actual: rutaActual
+    });
     return response.data;
   }
 };

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import HermesFloatingWidget from "@/components/layout/HermesFloatingWidget";
 
 export default function DashboardLayout({
   children,
@@ -48,6 +49,9 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Asistente Flotante Global de Hermes Sentinel */}
+      <HermesFloatingWidget />
     </div>
   );
 }
