@@ -53,10 +53,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-      <div className="sidebar-header">
+      <div className="sidebar-header" style={{ height: 'auto', minHeight: 'var(--header-height)', padding: '0.75rem 1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          <div style={{ backgroundColor: 'white', padding: '0.4rem 1rem', borderRadius: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '90%' }}>
-            <img src="/logo.jpg" alt="Security Logo" style={{ width: '100%', maxHeight: '45px', objectFit: 'contain' }} />
+          <div style={{ backgroundColor: 'white', padding: '0.25rem 0.5rem', borderRadius: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '76px', overflow: 'hidden' }}>
+            <img src="/logo.jpg" alt="Security Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scale(1.32)' }} />
           </div>
         </div>
         <button
